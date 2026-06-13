@@ -1,5 +1,5 @@
 /**
- * Resiliencia Digital — session_guard.js
+ * VTR Continuity — session_guard.js
  * Vector Telemetry Research © 2026
  * v0.1.0 — UPS Virtual: recuperación de sesión ante cortes de conectividad
  *
@@ -21,7 +21,7 @@
 
 // ── Constantes ────────────────────────────────────────────────────────────────
 const RD_VERSION        = '0.1.0';
-const DB_NAME           = 'resiliencia_digital';
+const DB_NAME           = 'vtr_continuity';
 const DB_VERSION        = 1;
 const STORE_SNAPSHOTS   = 'snapshots';
 const STORE_QUEUE       = 'offline_queue';
@@ -570,7 +570,7 @@ class SyncManager {
 // ── SessionGuard — API pública ────────────────────────────────────────────────
 
 /**
- * Orquestador principal de Resiliencia Digital.
+ * Orquestador principal de VTR Continuity.
  *
  * Uso:
  *   const guard = new SessionGuard({ endpoint: '/api/health', sendFn: mySync });

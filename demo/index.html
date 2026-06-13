@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VTR Continuity — Demo | Vector Telemetry Research</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+:root {
+  --bg:      #0a0e17;
+  --bg2:     #0f1623;
+  --bg3:     #141d2e;
+  --border:  rgba(63,207,113,0.15);
+  --green:   #3fcf71;
+  --green2:  #2d6e45;
+  --red:     #f56565;
+  --yellow:  #ecc94b;
+  --blue:    #63b3ed;
+  --text:    #e2e8f0;
+  --dim:     #718096;
+  --muted:   #4a5568;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+header {
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  padding: 1rem 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.brand { font-size: 1rem; font-weight: 700; }
+.brand span { color: var(--green); }
+.version { font-size: 0.7rem; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
+.status-pill {
+  display: flex; align-items: center; gap: 0.4rem;
+  padding: 0.3rem 0.8rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-family: 'JetBrains Mono', monospace;
+  border: 1px solid var(--green);
+  color: var(--green);
+  background: rgba(63,207,113,0.1);
+  transition: all 0.3s;
+}
+.status-pill.offline {
+  border-color: var(--red);
+  color: var(--red);
+  background: rgba(245,101,101,0.1);
+}
+.dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--green);
+  animation: pulse 2s infinite;
+}
+.dot.offline { background: var(--red); animation: none; }
+@keyframes pulse {
+  0%,100% { opacity:1; } 50% { opacity:0.3; }
+}
+main { flex:1; padding: 2rem; max-width: 1100px; margin: 0 auto; width: 100%; }
+h1 { font-size: 1.4rem; font-weight: 700; margin-bottom: 0.3rem; }
+.subtitle { font-size: 0.8rem; color: var(--dim); font-family: 'JetBrains Mono', monospace; margin-bottom: 2rem; }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem; }
+.card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.card-head {
+  padding: 0.85rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.8rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.card-body { padding: 1.25rem; }
+.btn-row { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1.5rem; }
+.btn {
+  padding: 0.6rem 1.25rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  font-family: 'Inter', sans-serif;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.15s;
+}
+.btn-green  { background: var(--green); color: #000; border-color: var(--green); }
+.btn-green:hover { background: #4ade80; }
+.btn-red    { background: transparent; color: var(--red); border-color: var(--red); }
+.btn-red:hover { background: rgba(245,101,101,0.1); }
+.btn-blue   { background: transparent; color: var(--blue); border-color: var(--blue); }
+.btn-blue:hover { background: rgba(99,179,237,0.1); }
+.btn-yellow { background: transparent; color: var(--yellow); border-color: var(--yellow); }
+.btn-yellow:hover { background: rgba(236,201,75,0.1); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.stat-row { display: flex; gap: 1rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
+.stat {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.75rem 1.25rem;
+  flex: 1;
+  min-width: 120px;
+}
+.stat-label { font-size: 0.65rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.3rem; }
+.stat-value { font-size: 1.5rem; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+.stat-value.green  { color: var(--green); }
+.stat-value.red    { color: var(--red); }
+.stat-value.yellow { color: var(--yellow); }
+.stat-value.blue   { color: var(--blue); }
+.log {
+  background: var(--bg3);
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  height: 220px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+.log-entry { display: flex; gap: 0.75rem; }
+.log-time  { color: var(--muted); flex-shrink: 0; }
+.log-msg   { color: var(--text); }
+.log-msg.ok     { color: var(--green); }
+.log-msg.warn   { color: var(--yellow); }
+.log-msg.error  { color: var(--red); }
+.log-msg.info   { color: var(--blue); }
+.queue-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 200px;
+  overflow-y: auto;
+}
+.queue-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--bg3);
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-family: 'JetBrains Mono', monospace;
+  border-left: 3px solid var(--yellow);
+}
+.queue-item.synced { border-left-color: var(--green); opacity: 0.6; }
+.qi-id    { color: var(--muted); font-size: 0.65rem; }
+.qi-type  { color: var(--yellow); font-weight: 600; }
+.qi-type.synced { color: var(--green); }
+.state-display {
+  background: var(--bg3);
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  color: var(--green);
+  min-height: 80px;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+.form-group { margin-bottom: 1rem; }
+.form-label { font-size: 0.75rem; color: var(--dim); margin-bottom: 0.3rem; display: block; }
+.form-input {
+  width: 100%;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  color: var(--text);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+}
+.form-input:focus { outline: none; border-color: var(--green); }
+footer {
+  background: var(--bg2);
+  border-top: 1px solid var(--border);
+  padding: 0.75rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+footer span { color: var(--green2); }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <div class="brand"><span>RESILIENCIA</span> DIGITAL</div>
+    <div class="version">session_guard.js v0.1.0 — Vector Telemetry Research © 2026</div>
+  </div>
+  <div class="status-pill" id="statusPill">
+    <div class="dot" id="statusDot"></div>
+    <span id="statusText">ONLINE</span>
+  </div>
+</header>
+
+<main>
+  <h1>UPS Virtual — Demo</h1>
+  <p class="subtitle">Simula cortes de conectividad y observa la recuperación automática de sesión</p>
+
+  <div class="stat-row">
+    <div class="stat">
+      <div class="stat-label">Estado</div>
+      <div class="stat-value green" id="statStatus">ONLINE</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Cola Offline</div>
+      <div class="stat-value yellow" id="statQueue">0</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Sincronizados</div>
+      <div class="stat-value blue" id="statSynced">0</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Session ID</div>
+      <div class="stat-value green" id="statSession" style="font-size:0.7rem;margin-top:4px">—</div>
+    </div>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn btn-red"    id="btnOffline">Simular Corte</button>
+    <button class="btn btn-green"  id="btnOnline">Restaurar Conexión</button>
+    <button class="btn btn-yellow" id="btnEnqueue">Encolar Operación</button>
+    <button class="btn btn-blue"   id="btnSave">Guardar Estado</button>
+    <button class="btn btn-blue"   id="btnRestore">Restaurar Estado</button>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <div class="card-head">
+        <span>Log de Eventos</span>
+        <span style="color:var(--muted);font-size:0.68rem;font-family:monospace" id="logCount">0 eventos</span>
+      </div>
+      <div class="card-body">
+        <div class="log" id="logContainer"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><span>Cola Offline</span></div>
+      <div class="card-body">
+        <div class="queue-list" id="queueContainer">
+          <div style="color:var(--muted);font-size:0.75rem;font-family:monospace">Cola vacía</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <div class="card-head"><span>Estado de Sesión Guardado</span></div>
+      <div class="card-body">
+        <div class="state-display" id="stateDisplay">Sin estado guardado</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><span>Simular Operación</span></div>
+      <div class="card-body">
+        <div class="form-group">
+          <label class="form-label">Tipo de operación</label>
+          <input class="form-input" id="opType" value="form_submit" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Payload (JSON)</label>
+          <input class="form-input" id="opPayload" value='{"usuario":"luis","paso":3}' />
+        </div>
+        <button class="btn btn-yellow" id="btnEnqueue2" style="width:100%">Encolar esta operación</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <span>Vector Telemetry Research © 2026</span>
+  <span>SIGNAL. VECTOR. INTELLIGENCE.</span>
+</footer>
+
+<script src="../src/session_guard.js"></script>
+<script>
+const {
+  SessionGuard,
+  safeDeserialize,
+} = window.ResilienciaDigital;
+
+let guard = null;
+let logCount = 0;
+let syncedCount = 0;
+let queueItems = [];
+let simulatedOffline = false;
+
+function ts() {
+  return new Date().toTimeString().slice(0,8);
+}
+
+function log(msg, type = '') {
+  logCount++;
+  const container = document.getElementById('logContainer');
+  const entry = document.createElement('div');
+  entry.className = 'log-entry';
+  entry.innerHTML = `<span class="log-time">${ts()}</span><span class="log-msg ${type}">${msg}</span>`;
+  container.appendChild(entry);
+  container.scrollTop = container.scrollHeight;
+  document.getElementById('logCount').textContent = logCount + ' eventos';
+}
+
+function updateStats() {
+  if (!guard) return;
+  document.getElementById('statStatus').textContent = simulatedOffline ? 'OFFLINE' : 'ONLINE';
+  document.getElementById('statStatus').className = 'stat-value ' + (simulatedOffline ? 'red' : 'green');
+  document.getElementById('statQueue').textContent = queueItems.filter(i => !i.synced).length;
+  document.getElementById('statSynced').textContent = syncedCount;
+  document.getElementById('statSession').textContent = guard.sessionId.slice(0,18) + '...';
+}
+
+function renderQueue() {
+  const container = document.getElementById('queueContainer');
+  if (queueItems.length === 0) {
+    container.innerHTML = '<div style="color:var(--muted);font-size:0.75rem;font-family:monospace">Cola vacía</div>';
+    return;
+  }
+  container.innerHTML = queueItems.map(item => `
+    <div class="queue-item ${item.synced ? 'synced' : ''}">
+      <span class="qi-id">${item.id.slice(0,8)}...</span>
+      <span class="qi-type ${item.synced ? 'synced' : ''}">${item.type}</span>
+      <span style="color:var(--muted);font-size:0.65rem;margin-left:auto">${item.synced ? '✓ sync' : '⏳ pendiente'}</span>
+    </div>
+  `).join('');
+}
+
+async function mockSendFn(item) {
+  if (simulatedOffline) {
+    return { ok: false, status: 503 };
+  }
+  await new Promise(r => setTimeout(r, 150));
+  const qi = queueItems.find(q => q.id === item.id);
+  if (qi) qi.synced = true;
+  syncedCount++;
+  log(`Sincronizado: ${item.type} [${item.id.slice(0,8)}...]`, 'ok');
+  renderQueue();
+  updateStats();
+  return { ok: true };
+}
+
+async function init() {
+  guard = new SessionGuard({
+    sessionId:   'demo-session-' + Date.now(),
+    heartbeatMs: 3000,
+    endpoint:    null,
+    sendFn:      mockSendFn,
+    onOffline: () => {
+      if (!simulatedOffline) return;
+      const pill = document.getElementById('statusPill');
+      const dot  = document.getElementById('statusDot');
+      pill.classList.add('offline');
+      dot.classList.add('offline');
+      document.getElementById('statusText').textContent = 'OFFLINE';
+      document.getElementById('statStatus').textContent = 'OFFLINE';
+      document.getElementById('statStatus').className = 'stat-value red';
+      log('Conexión perdida — modo offline activo', 'error');
+    },
+    onOnline: () => {
+      const pill = document.getElementById('statusPill');
+      const dot  = document.getElementById('statusDot');
+      pill.classList.remove('offline');
+      dot.classList.remove('offline');
+      document.getElementById('statusText').textContent = 'ONLINE';
+      document.getElementById('statStatus').textContent = 'ONLINE';
+      document.getElementById('statStatus').className = 'stat-value green';
+      log('Conexión restaurada — sincronizando cola...', 'ok');
+    },
+    onStateRestored: (state) => {
+      log('Estado previo restaurado: ' + JSON.stringify(state), 'info');
+      document.getElementById('stateDisplay').textContent = JSON.stringify(state, null, 2);
+    },
+  });
+
+  await guard.init();
+  log('SessionGuard inicializado', 'ok');
+  log('Session ID: ' + guard.sessionId, 'info');
+  updateStats();
+}
+
+document.getElementById('btnOffline').addEventListener('click', () => {
+  simulatedOffline = true;
+  guard._heartbeat._isOnline = false;
+  guard._handleOffline();
+  updateStats();
+});
+
+document.getElementById('btnOnline').addEventListener('click', async () => {
+  simulatedOffline = false;
+  guard._heartbeat._isOnline = true;
+  await guard._handleOnline();
+  updateStats();
+});
+
+document.getElementById('btnEnqueue').addEventListener('click', async () => {
+  const id = await guard.enqueue('api_call', { endpoint: '/api/data', ts: Date.now() });
+  if (id) {
+    queueItems.push({ id, type: 'api_call', synced: false });
+    log('Operación encolada: api_call [' + id.slice(0,8) + '...]', 'warn');
+    renderQueue();
+    updateStats();
+  }
+});
+
+document.getElementById('btnEnqueue2').addEventListener('click', async () => {
+  const type    = document.getElementById('opType').value.trim() || 'custom_op';
+  const payload = safeDeserialize(document.getElementById('opPayload').value) || {};
+  const id = await guard.enqueue(type, payload);
+  if (id) {
+    queueItems.push({ id, type, synced: false });
+    log('Operación encolada: ' + type + ' [' + id.slice(0,8) + '...]', 'warn');
+    renderQueue();
+    updateStats();
+  }
+});
+
+document.getElementById('btnSave').addEventListener('click', async () => {
+  const state = {
+    usuario:  'Luis Castellanos',
+    empresa:  'Vector Telemetry Research',
+    paso:     3,
+    datos:    { proyecto: 'Tampico Shield', fase: 6 },
+    ts:       Date.now(),
+  };
+  const ok = await guard.saveState(state);
+  if (ok) {
+    log('Estado guardado en IndexedDB (cifrado AES-GCM)', 'ok');
+    document.getElementById('stateDisplay').textContent = JSON.stringify(state, null, 2);
+  } else {
+    log('Estado guardado en memoria (IndexedDB no disponible)', 'warn');
+    document.getElementById('stateDisplay').textContent = JSON.stringify(state, null, 2);
+  }
+  updateStats();
+});
+
+document.getElementById('btnRestore').addEventListener('click', async () => {
+  const state = await guard.restoreState();
+  if (state) {
+    log('Estado restaurado correctamente', 'ok');
+    document.getElementById('stateDisplay').textContent = JSON.stringify(state, null, 2);
+  } else {
+    log('Sin estado previo guardado', 'warn');
+  }
+});
+
+init();
+</script>
+</body>
+</html>
