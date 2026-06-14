@@ -316,21 +316,25 @@ class TestSyncManager:
         with pytest.raises(ValueError):
             SyncManager(transport=t, store=None)
 
-    def test_initial_state(self, store):
+    def test_initial_state(self, store, tmp_path):
         from rpi.sync_manager import SyncManager
         from rpi.transport import IPTransport
+        from core.custody_manager import CustodyManager
         t = IPTransport(server_url="http://localhost", api_key="k")
-        sm = SyncManager(transport=t, store=store)
+        custody = CustodyManager(db_path=tmp_path / "c.db")
+        sm = SyncManager(transport=t, store=store, custody=custody)
         assert sm.state.status == "INITIALIZING"
         assert sm.is_online() is False
 
-    def test_flush_sends_events(self, store):
+    def test_flush_sends_events(self, store, tmp_path):
         from rpi.sync_manager import SyncManager
         from rpi.transport import IPTransport, TransportResult
+        from core.custody_manager import CustodyManager
         t = IPTransport(server_url="http://localhost", api_key="k")
         t.send = MagicMock(return_value=TransportResult(success=True, transport_type="ip_http"))
         t.health_check = MagicMock(return_value=True)
-        sm = SyncManager(transport=t, store=store)
+        custody = CustodyManager(db_path=tmp_path / "c.db")
+        sm = SyncManager(transport=t, store=store, custody=custody)
 
         # Encolar 3 eventos
         for _ in range(3):
@@ -340,13 +344,15 @@ class TestSyncManager:
         assert store.depth() == 0
         assert sm.state.total_sent == 3
 
-    def test_flush_marks_failed_events(self, store):
+    def test_flush_marks_failed_events(self, store, tmp_path):
         from rpi.sync_manager import SyncManager
         from rpi.transport import IPTransport, TransportResult
+        from core.custody_manager import CustodyManager
         t = IPTransport(server_url="http://localhost", api_key="k")
         t.send = MagicMock(return_value=TransportResult(success=False, error="fail", transport_type="ip_http"))
         t.health_check = MagicMock(return_value=True)
-        sm = SyncManager(transport=t, store=store)
+        custody = CustodyManager(db_path=tmp_path / "c.db")
+        sm = SyncManager(transport=t, store=store, custody=custody)
 
         store.enqueue(make_event())
         sm._flush_queue()
@@ -357,11 +363,13 @@ class TestSyncManager:
         # send_with_retry agota TransportConfig.max_retries (3) + 1 mark_attempt
         assert events[0].attempts >= 1
 
-    def test_enqueue_via_sync_manager(self, store):
+    def test_enqueue_via_sync_manager(self, store, tmp_path):
         from rpi.sync_manager import SyncManager
         from rpi.transport import IPTransport
+        from core.custody_manager import CustodyManager
         t = IPTransport(server_url="http://localhost", api_key="k")
-        sm = SyncManager(transport=t, store=store)
+        custody = CustodyManager(db_path=tmp_path / "c.db")
+        sm = SyncManager(transport=t, store=store, custody=custody)
         evt = make_event()
         row_id = sm.enqueue(evt)
         assert row_id > 0
