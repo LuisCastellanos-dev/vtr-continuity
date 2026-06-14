@@ -17,12 +17,14 @@ Vector Telemetry Research © 2026
 - [x] 41/41 tests — Jest
 - [x] Demo interactiva
 
-### v0.2.0 — RPi 4 OT Tier (planificado)
-- [ ] Proxy local de sincronizacion para entornos DMZ/air-gapped
-- [ ] Receptor de cola offline via HTTP local (sin internet)
-- [ ] Persistencia en SQLite local en RPi 4
-- [ ] Reenvio a servidor central cuando OT network se restaura
-- [ ] Compatible con redes Modbus/DNP3
+### v0.2.0 — RPi 4 OT Tier ✅ (implementado — pendiente despliegue en hardware)
+- [x] `rpi/transport.py` — AbstractTransport + IPTransport; LoRaTransport stub documentado para v0.5.0 (Heltec LoRa 32 V3, SX1262, 915 MHz)
+- [x] `rpi/queue_store.py` — SQLite WAL, thread-local por instancia, idempotency keys, FIFO, sync_log
+- [x] `rpi/sync_manager.py` — heartbeat + flush FIFO, backoff exponencial, thread daemon
+- [x] `rpi/proxy.py` — FastAPI puerto 7700, Modo A (browser) y Modo B (agentless)
+- [x] `rpi/agent.py` — ingesta sin browser: stdin / file (tail-f) / socket TCP
+- [x] 51/51 tests — pytest
+- [ ] Despliegue fisico en RPi 4 — pendiente adquisicion de hardware
 
 ### v0.3.0 — Integracion VTR (planificado)
 - [ ] Integracion nativa con Tampico Shield alerts
