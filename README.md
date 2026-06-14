@@ -34,3 +34,13 @@ Vector Telemetry Research © 2026
 - [ ] Autenticacion JWT con refresh token rotation
 - [ ] Cifrado end-to-end entre HMI y RPi 4 tier
 - [ ] Auditoria de sesiones para cumplimiento NERC CIP / IEC 62443
+
+### v0.5.0 — Fallback Tier 2 RF (en evaluacion)
+- [ ] Ruta A: Banda ISM 915 MHz LoRa sin licencia — ESP32+SX1276, desplegable hoy
+- [ ] Ruta B: Concesion IFT red privada — VTR opera RF como servicio administrado
+- [ ] Serializacion Protobuf+LZ4
+- [ ] Cifrado XChaCha20-Poly1305 + firma Ed25519
+- [ ] LoRa L1 primario, BLE Mesh corto alcance
+- [ ] DTN Bundle Protocol RFC 9171 capa L2
+- [ ] UI: boton Abrir Canal Alterno tras 10min OFFLINE
+- [ ] Sneakernet .vtrc como fallback extremo
