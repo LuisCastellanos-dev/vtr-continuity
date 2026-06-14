@@ -1,0 +1,36 @@
+[Unit]
+Description=VTR Continuity — Shield Bridge (Tampico Shield → Queue)
+Documentation=https://github.com/LuisCastellanos-dev/vtr-continuity
+# Solo corre si el archivo de ShieldDB existe
+ConditionPathExists=/var/lib/tampico-shield/shield.db
+After=network.target
+
+[Service]
+Type=oneshot
+User=vtr
+Group=vtr
+
+# Variables de entorno — ajustar según despliegue
+Environment=TAMPICO_DB_PATH=/var/lib/tampico-shield/shield.db
+Environment=VTR_DB_PATH=/var/lib/vtr-continuity/queue.db
+Environment=BRIDGE_BATCH_LIMIT=100
+Environment=BRIDGE_LOOKBACK_SECONDS=300
+Environment=BRIDGE_ENTROPY_THRESHOLD=0.7
+Environment=BRIDGE_MAX_PAYLOAD_BYTES=8192
+
+ExecStart=/usr/bin/python3 -m rpi.shield_bridge
+WorkingDirectory=/opt/vtr-continuity
+
+# Seguridad — superficie mínima en producción OT
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/vtr-continuity
+ReadOnlyPaths=/var/lib/tampico-shield
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=vtr-shield-bridge
+
+[Install]
+WantedBy=multi-user.target

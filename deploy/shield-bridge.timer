@@ -1,0 +1,14 @@
+[Unit]
+Description=VTR Continuity — Shield Bridge Timer
+Documentation=https://github.com/LuisCastellanos-dev/vtr-continuity
+
+[Timer]
+# Ejecutar cada 5 minutos
+OnBootSec=60
+OnUnitActiveSec=5min
+
+# Si el sistema estuvo apagado, ejecutar al arrancar sin esperar el intervalo
+Persistent=true
+
+[Install]
+WantedBy=timers.target
