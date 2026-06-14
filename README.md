@@ -26,16 +26,22 @@ Vector Telemetry Research © 2026
 - [x] 51/51 tests — pytest
 - [ ] Despliegue fisico en RPi 4 — pendiente adquisicion de hardware
 
-### v0.3.0 — Integracion VTR (planificado)
-- [ ] Integracion nativa con Tampico Shield alerts
-- [ ] Export de eventos de sesion a storage/db.py
-- [ ] Dashboard en Web SOC de Tampico Shield
+### v0.3.0 — Integración Tampico Shield ✅ (implementado)
+- [x] `rpi/shield_bridge.py` — solo lectura ShieldDB, verificación SHA-256 por fila
+- [x] Exporta alerts, netprobe_events, baseline_snapshots (outliers entropy>=0.7)
+- [x] Idempotente — doble ejecución no duplica eventos
+- [x] systemd timer cada 5 min con ProtectSystem=strict
+- [x] 41/41 pytest
 
-### v0.4.0 — Enterprise OT (planificado)
-- [ ] Soporte multi-HMI (Ignition, WinCC OA, iFIX WebSpace)
-- [ ] Autenticacion JWT con refresh token rotation
-- [ ] Cifrado end-to-end entre HMI y RPi 4 tier
-- [ ] Auditoria de sesiones para cumplimiento NERC CIP / IEC 62443
+### v0.4.0 — Enterprise OT 🔄 (en progreso)
+- [x] `core/custody_manager.py` — transferencia custodia DTN-inspired (RFC 9171)
+- [x] `rpi/sync_manager.py` — ciclo grant→send→ack→is_safe_to_delete
+- [x] MAX_LORA_FRAME_BYTES = 222 — límite físico SX1262 verificable con test
+- [x] custody.db separado de queue.db — sobrevive corrupción independiente
+- [x] 64/64 pytest — 156/156 suite completa
+- [ ] Multi-HMI (Ignition, WinCC OA, iFIX WebSpace)
+- [ ] JWT refresh rotation
+- [ ] Auditoría NERC CIP / IEC 62443
 
 ### v0.5.0 — Fallback Tier 2 RF (en evaluacion)
 - [ ] Ruta A: Banda ISM 915 MHz LoRa sin licencia — ESP32+SX1276, desplegable hoy
