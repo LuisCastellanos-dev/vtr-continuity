@@ -46,3 +46,38 @@ Vector Telemetry Research © 2026
 - [ ] DTN Bundle Protocol RFC 9171 capa L2
 - [ ] UI: boton Abrir Canal Alterno tras 10min OFFLINE
 - [ ] Sneakernet .vtrc como fallback extremo
+
+
+## Filosofía de diseño — Resource-Constrained Architecture
+
+VTR Continuity está diseñado bajo el principio de **resource-constrained design**:
+hacer más con menos, con propósito explícito en cada decisión técnica.
+
+Esta no es una limitación — es una ventaja competitiva en entornos OT reales
+donde el hardware en campo es un RPi 4, no un rack de servidores, y donde
+una red puede estar cortada por horas sin previo aviso.
+
+Cada decisión del stack refleja esa premisa:
+
+| Decisión | Alternativa descartada | Razón |
+|---|---|---|
+| SQLite WAL | PostgreSQL | Misma garantía ACID, cero footprint de servidor |
+| Protobuf + LZ4 | JSON crudo | Payload mínimo para canal LoRa (≤222 bytes/frame) |
+| Thread daemon explícito | Framework async pesado | Control total, sin overhead oculto |
+| DTN Bundle Protocol RFC 9171 | TCP/IP con reconexión simple | Tolerancia real a partición de red, no solo retry |
+| AbstractTransport | Implementación única | Intercambiar canal sin reescribir el core |
+
+### Inspiración: NASA Deep Space Network
+
+El protocolo de capa L2 en v0.5.0 (DTN Bundle Protocol RFC 9171) es el mismo
+estándar utilizado por NASA/JPL para comunicaciones con la Estación Espacial
+Internacional y misiones interplanetarias — diseñado para enlaces con latencia
+de minutos, pérdida de paquetes alta, y reconexiones intermitentes.
+
+El AGC (Apollo Guidance Computer) aterrizó en la Luna con 4KB de RAM.
+Los ingenieros que lo lograron no tenían recursos de sobra — tenían
+claridad de propósito y disciplina de diseño.
+
+VTR aplica esa misma disciplina a redes OT industriales en Tamaulipas:
+*arquitectura tolerante a fallas basada en el mismo protocolo DTN de NASA,
+adaptada para infraestructura crítica en campo.*
