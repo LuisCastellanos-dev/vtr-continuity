@@ -45,14 +45,13 @@ Vector Telemetry Research © 2026
 - [x] `server/compliance.py` — AuditLog SHA-256, ComplianceChecker NERC CIP / IEC 62443, EvidenceExport
 - [x] 342/342 pytest — v0.4.0-final
 
-### v0.5.0 — Fallback Tier 2 RF (en evaluacion)
-- [ ] Ruta A: Banda ISM 915 MHz LoRa sin licencia — ESP32+SX1276, desplegable hoy
-- [ ] Ruta B: Concesion IFT red privada — VTR opera RF como servicio administrado
-- [ ] Serializacion Protobuf+LZ4
-- [ ] Cifrado XChaCha20-Poly1305 + firma Ed25519
-- [ ] LoRa L1 primario, BLE Mesh corto alcance
-- [ ] DTN Bundle Protocol RFC 9171 capa L2
-- [ ] UI: boton Abrir Canal Alterno tras 10min OFFLINE
+### v0.5.0 — Fallback Tier 2 RF (en progreso)
+- [x] `core/crypto_transport.py` — Capa 1: XChaCha20-Poly1305 + Ed25519 + nonce monotónico + 76 tests (17 pentesting)
+- [x] `core/dtn_fragmenter.py` — Capa 2: fragmentación asimétrica + frames fantasma + entropía independiente + 63 tests (14 pentesting)
+- [ ] `rpi/uart_bridge.py` — Capa 2b: puente UART RPi↔Heltec, buffers estáticos uint8_t[222]
+- [ ] `core/dtn_bundle.py` — Capa 3: DTN Bundle Protocol RFC 9171 completo
+- [ ] Firmware Heltec Arduino/C++ — sin malloc, sin String, eFuse JTAG disable
+- [ ] UI: botón Abrir Canal Alterno tras 10min OFFLINE
 - [ ] Sneakernet .vtrc como fallback extremo
 
 
