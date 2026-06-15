@@ -89,3 +89,43 @@ claridad de propósito y disciplina de diseño.
 VTR aplica esa misma disciplina a redes OT industriales en Tamaulipas:
 *arquitectura tolerante a fallas basada en el mismo protocolo DTN de NASA,
 adaptada para infraestructura crítica en campo.*
+
+
+## Seguridad RF — Entropía Independiente por Dispositivo
+
+### Por qué no entropía dual (RPi + Heltec combinados)
+
+Durante el diseño de v0.5.0 se evaluó mezclar la entropía del RPi 4 con
+la del Heltec LoRa 32 V3 en un handshake inicial para generar el jitter
+de los frames fantasma. Esta opción fue descartada por crear una
+dependencia circular crítica:
+
+    Red IP caída → activar canal LoRa → Heltec no responde →
+    no hay entropía dual → no se puede transmitir por LoRa
+
+El canal de respaldo fallaría exactamente cuando más se necesita.
+Adicionalmente, un Heltec comprometido físicamente revelaría el patrón
+de jitter de ambos dispositivos simultáneamente.
+
+### Por qué no QRNG en red (servicios cuánticos externos)
+
+Los servicios QRNG (ANU, IBM Quantum) requieren conectividad a internet —
+el mismo recurso que vtr-continuity reemplaza cuando falla. Consultar
+una API cuántica para generar jitter revelaría además cuándo el sistema
+está a punto de transmitir, introduciendo más vectores de los que mitiga.
+
+### Solución: entropía independiente por dispositivo
+
+Cada dispositivo genera su propia entropía desde su TRNG de hardware local:
+
+| Dispositivo | Fuente de entropía | Mecanismo |
+|---|---|---|
+| RPi 4 | BCM2711 TRNG | secrets.token_bytes() vía /dev/urandom del kernel |
+| Heltec LoRa 32 V3 | ESP32-S3 TRNG | esp_random() nativo del hardware |
+
+Consecuencia de seguridad: comprometer una fuente no revela el patrón
+de la otra. Son dos incógnitas independientes para cualquier atacante.
+El jitter de los frames fantasma depende de ambas fuentes por separado —
+sin handshake, sin dependencia cruzada, sin punto único de falla.
+
+Esta decisión está validada con 63 tests de pentesting en core/tests/test_dtn_fragmenter.py.
