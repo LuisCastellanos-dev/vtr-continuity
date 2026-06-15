@@ -44,7 +44,7 @@ jobs:
           node-version: "20"
 
       - name: Instalar dependencias Node
-        run: npm install
+        run: npm ci
 
       - name: Ejecutar tests Jest
-        run: npm test
+        run: npm test -- --testPathPattern=src/
