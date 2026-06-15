@@ -1,3 +1,6 @@
+[![VTR Continuity CI — Python](https://github.com/LuisCastellanos-dev/vtr-continuity/actions/workflows/ci.yml/badge.svg?job=pytest)](https://github.com/LuisCastellanos-dev/vtr-continuity/actions/workflows/ci.yml)
+[![VTR Continuity CI — JavaScript](https://github.com/LuisCastellanos-dev/vtr-continuity/actions/workflows/ci.yml/badge.svg?job=jest)](https://github.com/LuisCastellanos-dev/vtr-continuity/actions/workflows/ci.yml)
+
 # VTR Continuity — session_guard.js
 Vector Telemetry Research © 2026
 
