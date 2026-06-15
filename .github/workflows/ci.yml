@@ -47,4 +47,4 @@ jobs:
         run: npm ci
 
       - name: Ejecutar tests Jest
-        run: npm test -- --testPathPatterns=src/
+        run: npm test
