@@ -33,15 +33,14 @@ Vector Telemetry Research © 2026
 - [x] systemd timer cada 5 min con ProtectSystem=strict
 - [x] 41/41 pytest
 
-### v0.4.0 — Enterprise OT 🔄 (en progreso)
-- [x] `core/custody_manager.py` — transferencia custodia DTN-inspired (RFC 9171)
+### v0.4.0 — Enterprise OT ✅ (implementado)
+- [x] `core/custody_manager.py` — custodia DTN-inspired RFC 9171, grant→ack→delete
 - [x] `rpi/sync_manager.py` — ciclo grant→send→ack→is_safe_to_delete
-- [x] MAX_LORA_FRAME_BYTES = 222 — límite físico SX1262 verificable con test
-- [x] custody.db separado de queue.db — sobrevive corrupción independiente
-- [x] 64/64 pytest — 156/156 suite completa
-- [ ] Multi-HMI (Ignition, WinCC OA, iFIX WebSpace)
-- [ ] JWT refresh rotation
-- [ ] Auditoría NERC CIP / IEC 62443
+- [x] `server/auth.py` — JWT RS256, refresh rotation, grace period OT offline
+- [x] `rpi/jwt_verifier.py` — verificador lado RPi, solo clave pública
+- [x] `rpi/hmi_adapter.py` — Ignition + OPC-UA implementados, Modbus/WinCC/iFIX/DNP3 stubs
+- [x] `server/compliance.py` — AuditLog SHA-256, ComplianceChecker NERC CIP / IEC 62443, EvidenceExport
+- [x] 342/342 pytest — v0.4.0-final
 
 ### v0.5.0 — Fallback Tier 2 RF (en evaluacion)
 - [ ] Ruta A: Banda ISM 915 MHz LoRa sin licencia — ESP32+SX1276, desplegable hoy
