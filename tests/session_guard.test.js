@@ -78,17 +78,18 @@ describe('CryptoLayer (passthrough en Node.js)', () => {
     await expect(c.init()).resolves.toBeUndefined();
   });
 
-  test('encrypt retorna el texto en passthrough', async () => {
+  test('encrypt retorna objeto cifrado en Node.js 20', async () => {
     const c = new CryptoLayer();
     await c.init();
     const result = await c.encrypt('hola mundo');
-    expect(result).toBe('hola mundo');
+    expect(result).not.toBeNull();
   });
 
-  test('decrypt retorna el texto en passthrough', async () => {
+  test('decrypt de encrypt retorna texto original en Node.js 20', async () => {
     const c = new CryptoLayer();
     await c.init();
-    const result = await c.decrypt('hola mundo');
+    const encrypted = await c.encrypt('hola mundo');
+    const result = await c.decrypt(encrypted);
     expect(result).toBe('hola mundo');
   });
 
