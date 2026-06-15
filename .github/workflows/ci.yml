@@ -24,7 +24,7 @@ jobs:
       - name: Instalar dependencias Python
         run: |
           pip install --upgrade pip
-          pip install fastapi uvicorn httpx pydantic pytest pytest-asyncio cryptography pyjwt asyncua
+          pip install fastapi uvicorn httpx pydantic pytest pytest-asyncio cryptography pyjwt asyncua lz4 PyNaCl
 
       - name: Ejecutar tests Python
         run: |
