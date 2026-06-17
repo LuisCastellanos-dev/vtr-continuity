@@ -60,6 +60,15 @@ Ver `docs/DECISIONS-v0.5.0.md` para el análisis completo. Resumen:
 | 2 | Profile Argon2id | **2D** con default `desktop` (64 MiB, 3 it) + async | OWASP 2024 sin sacrificar boot time |
 | 3 | `device_secret` | **3A** — Bench Tampico air-gapped (3C en v0.6) | Auditable y manejable a tu escala |
 | 4 | Firma provisioning | **4C** — CA dos niveles, root offline + intermediate online | Trust anchor sin HSM en v0.5.0 |
+| 5 *(nueva, 2026-06-16)* | Custodia de la CA root | **PyCryptodome SSS 3-de-5**, adelantado desde v0.6 a v0.5.0 | Mitiga pérdida total del bench sin punto único de fallo — ver `docs/VTR-PKI-001.md` §4 |
+
+> **Nota sobre la decisión 5:** se investigó el historial real de fallas de
+> Shamir's Secret Sharing en producción (caso Armory, hallazgos de Trail of
+> Bits) antes de adoptarlo. El diseño en VTR-PKI-001 incluye 4 capas de
+> mitigación explícitas (verificación de RNG, HMAC de integridad, umbral
+> estricto, custodia distribuida) precisamente para no repetir esos fallos.
+> Los custodios específicos de 4 de las 5 partes quedan como **pendiente
+> operativo** — no inventados por Claude, a definir por Luis.
 
 ---
 
@@ -104,20 +113,20 @@ Al consolidar el roadmap, detecté 10 omisiones que ahora forman parte del backl
 
 Cuando estés listo para generar el código y la documentación, las 10 entregables son:
 
-| # | Archivo | Cubre |
-|---|---|---|
-| 1 | `docs/VTR-CRYPTO-001.md` | Reglas cripto consolidadas |
-| 2 | `docs/VTR-PKI-001.md` | Esquema PKI dos niveles |
-| 3 | `crypto_layer/errors.py` | Jerarquía de excepciones |
-| 4 | `crypto_layer/__init__.py` | API pública |
-| 5 | `crypto_layer/argon2_derive.py` | Derivación con profile + async |
-| 6 | `crypto_layer/hkdf_expand.py` | Expansión de subclaves |
-| 7 | `crypto_layer/ed25519_sign.py` | Firma/verificación de `.vtrc` |
-| 8 | `config/rf_config.yaml` | Sección `crypto:` |
-| 9 | `tests/test_crypto_layer.py` | Tests felices + ≥15 adversariales |
-| 10 | `docs/DOD-v0.5.0.md` | Definition of Done actualizado |
+| # | Archivo | Cubre | Estado |
+|---|---|---|---|
+| 1 | `docs/VTR-CRYPTO-001.md` | Reglas cripto consolidadas (4, incluye VTR-CRYPTO-004 nueva) | ✅ GENERADO 2026-06-16 |
+| 2 | `docs/VTR-PKI-001.md` | Esquema PKI dos niveles + custodia SSS 3-de-5 de la root | ✅ GENERADO 2026-06-16 |
+| 3 | `crypto_layer/errors.py` | Jerarquía de excepciones | Pendiente |
+| 4 | `crypto_layer/__init__.py` | API pública | Pendiente |
+| 5 | `crypto_layer/argon2_derive.py` | Derivación con profile + async | Pendiente |
+| 6 | `crypto_layer/hkdf_expand.py` | Expansión de subclaves | Pendiente |
+| 7 | `crypto_layer/ed25519_sign.py` | Firma/verificación de `.vtrc` | Pendiente |
+| 8 | `config/rf_config.yaml` | Sección `crypto:` | Pendiente |
+| 9 | `tests/test_crypto_layer.py` | Tests felices + ≥15 adversariales | Pendiente |
+| 10 | `docs/DOD-v0.5.0.md` | Definition of Done actualizado | Pendiente |
 
-**Estado:** roadmap aprobado, falta confirmar y generar código.
+**Estado:** 2 de 10 propuestas generadas. Siguiente: #3 (`crypto_layer/errors.py`).
 
 ---
 
@@ -182,3 +191,14 @@ Lo que cristalicé en esta sesión y debe permanecer en memoria:
 
 5. **Async > síncrono en boot.** Derivación de claves en thread aparte = proxy
    arriba en <2s + clave disponible en ~200ms más, sin bloquear el inicio.
+
+6. **Un esquema criptográfico sólido en teoría puede estar roto en la práctica
+   por la implementación, no por la matemática.** Shamir's Secret Sharing es
+   un ejemplo de manual: la wallet Armory rompió su esquema de backups
+   fragmentados usando hashing determinista en vez de un RNG real para
+   generar los coeficientes del polinomio — el resultado fue que cualquier
+   par de partes, sin importar el umbral configurado, reconstruía el secreto.
+   **Regla aplicada:** antes de adoptar cualquier primitiva con historial de
+   fallas de implementación conocidas, verificar el caso de falla real
+   (no solo "es seguro en teoría") y diseñar la mitigación explícita contra
+   ese caso específico — no contra una amenaza genérica.
