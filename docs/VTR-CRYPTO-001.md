@@ -286,6 +286,6 @@ omisión silenciosa.
   boot (Épica C — diseño pendiente, confirmado en esta sesión).
 - Procedimiento físico completo de bench para Secure Boot V2 + Flash Encryption
   del Heltec (Épica C2 / E11 — este documento fija QUÉ se habilita, no el SOP
-  paso a paso con comandos exactos para el bench de Tampico).
+  paso a paso con comandos exactos para el bench principal).
 - Mitigación de fault injection contra Secure Boot (fuera de alcance v0.5.0,
   riesgo aceptado documentado en sección 5).

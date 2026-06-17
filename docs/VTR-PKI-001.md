@@ -39,7 +39,7 @@ VTR-Root-CA (Ed25519, offline)
 | Nivel | Algoritmo | Validez | Custodia |
 |---|---|---|---|
 | Root | Ed25519 | 10 años | Offline, USB cifrado LUKS, fragmentado vía SSS 3-de-5 (ver §4) |
-| Intermediate | Ed25519 | 2 años | Online, bench Tampico air-gapped salvo durante operación de firma |
+| Intermediate | Ed25519 | 2 años | Online, bench principal air-gapped salvo durante operación de firma |
 | Device cert | Ed25519 | 18 meses (alineado con rotación de `device_secret`, ver §5) | Embebido en partición firmada del dispositivo |
 
 **Por qué Ed25519 en los tres niveles, no RSA:** consistencia con la primitiva
@@ -93,7 +93,7 @@ root_key = Ed25519PrivateKey.generate()
 
 subject = issuer = x509.Name([
     x509.NameAttribute(NameOID.COMMON_NAME, "VTR-Root-CA"),
-    x509.NameAttribute(NameOID.ORGANIZATION_NAME, "Vector Telemetry Research"),
+    x509.NameAttribute(NameOID.ORGANIZATION_NAME, "VTR"),
 ])
 
 root_cert = (
@@ -115,7 +115,7 @@ root_cert = (
 
 ### 3.1 Creación de la Root (ceremonia única, offline)
 
-1. Ejecutar en máquina **air-gapped** del bench de Tampico — sin red, Wi-Fi y
+1. Ejecutar en máquina **air-gapped** del bench principal — sin red, Wi-Fi y
    Bluetooth deshabilitados por hardware, no solo por software.
 2. Generar `root_key` con `Ed25519PrivateKey.generate()`.
 3. Construir y autofirmar el certificado root con validez de 10 años,
@@ -278,19 +278,20 @@ intenta "adivinar" con menos partes de las requeridas.
 
 | Parte | Custodio | Ubicación | Estado |
 |---|---|---|---|
-| 1 | Luis (operador principal) | USB cifrado, caja fuerte Tampico (junto al bench) | Definido |
-| 2 | Luis (copia personal) | USB cifrado, ubicación secundaria de confianza | **Pendiente — a definir por Luis** |
-| 3 | Persona de confianza designada por VTR | Custodia independiente | **Pendiente — a designar por Luis** |
-| 4 | Backup digital cifrado | Medio físico fuera de Tampico (ej. caja de seguridad bancaria) | **Pendiente — a definir por Luis** |
-| 5 | Reserva de emergencia | Sellada, apertura solo en escenario de recuperación documentado | **Pendiente — a definir por Luis** |
+| 1 | Operador principal | USB cifrado, caja fuerte del bench | Definido |
+| 2 | Copia de respaldo del operador principal | USB cifrado, ubicación secundaria de confianza | **Pendiente — a definir** |
+| 3 | Persona de confianza designada | Custodia independiente | **Pendiente — a designar** |
+| 4 | Backup digital cifrado | Medio físico fuera del sitio principal (ej. caja de seguridad bancaria) | **Pendiente — a definir** |
+| 5 | Reserva de emergencia | Sellada, apertura solo en escenario de recuperación documentado | **Pendiente — a definir** |
 
 > **Nota explícita:** este documento no inventa ubicaciones ni custodios
 > específicos para las partes 2, 3, 4 y 5. Son decisiones operativas que
-> dependen de circunstancias personales y de confianza de Luis Castellanos,
-> no de un criterio técnico que este documento pueda resolver por sí mismo.
-> El roadmap (Épica B, tarea B4) queda abierto hasta que se confirmen.
+> dependen de circunstancias logísticas y de confianza propias del
+> despliegue, no de un criterio técnico que este documento pueda resolver
+> por sí mismo. El roadmap (Épica B, tarea B4) queda abierto hasta que se
+> confirmen.
 
-### 4.4 Escenario de recuperación — pérdida total del bench de Tampico
+### 4.4 Escenario de recuperación — pérdida total del bench principal
 
 Si el bench se pierde por completo (incendio, robo, desastre natural) **antes**
 de que existan registros redundantes adicionales:
@@ -348,9 +349,9 @@ parte del propio canal de bundles `.vtrc`:
 ## 6. Pendientes que este documento NO resuelve
 
 - Custodios y ubicaciones específicas de las partes SSS 2, 3, 4 y 5 (sección
-  4.3) — decisión operativa de Luis, no técnica.
+  4.3) — decisión operativa pendiente de logística, no técnica.
 - Procedimiento detallado paso a paso de la ceremonia de firma con comandos
-  exactos para el bench físico de Tampico (queda para el SOP de provisioning,
+  exactos para el bench físico (queda para el SOP de provisioning,
   Épica C / E11).
 - Mecanismo de detección de que un nodo remoto necesita una CRL actualizada
   de forma proactiva (hoy es pasivo — el nodo solo actualiza cuando recibe un
