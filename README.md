@@ -1,16 +1,17 @@
 # VTR Continuity — Estado del Proyecto v0.5.0
 
-> **Estado:** 7 de 10 propuestas de la fase criptográfica generadas:
+> **Estado:** 8 de 10 propuestas de la fase criptográfica generadas:
 > `docs/VTR-CRYPTO-001.md`, `docs/VTR-PKI-001.md`, `crypto_layer/errors.py`,
 > `crypto_layer/__init__.py`, `crypto_layer/argon2_derive.py`,
-> `crypto_layer/hkdf_expand.py`, `crypto_layer/ed25519_sign.py`. La #7
-> se validó contra 2 vectores oficiales de RFC 8032 (Apéndice 7.1),
-> coincidencia exacta byte por byte de la firma, e incluye el test de
-> seguridad más crítico del criterio de aceptación: rechazo confirmado de
-> bundles modificados tras la firma. La canonicalización del formato de
-> bundle `.vtrc` se mantuvo deliberadamente fuera de este módulo — queda
-> como diseño pendiente. Siguiente entregable: propuesta #8
-> (`config/rf_config.yaml`).
+> `crypto_layer/hkdf_expand.py`, `crypto_layer/ed25519_sign.py`,
+> `config/rf_config.yaml` + `crypto_layer/rf_config_loader.py`. La #8 se
+> generó como dos archivos (no uno) tras detectar que el criterio de
+> aceptación exigía un loader con validación de tipos/rangos, manteniendo
+> intacta la decisión previa de que `CryptoConfig` no parsea YAML
+> directamente. Cadena completa validada de extremo a extremo: el YAML
+> real se carga, valida, y funciona con todas las operaciones
+> criptográficas ya generadas. Siguiente entregable: propuesta #9
+> (`tests/test_crypto_layer.py`).
 
 ---
 
@@ -45,7 +46,10 @@ vtr-continuity/
 │   ├── __init__.py                    # ✅ API pública — CryptoLayer, CryptoConfig
 │   ├── argon2_derive.py               # ✅ Profiles embedded/desktop/hardened, lanes=1
 │   ├── hkdf_expand.py                 # ✅ RFC 5869 HKDF-Expand, validado con vectores oficiales
-│   └── ed25519_sign.py                # ✅ RFC 8032 Ed25519, validado con vectores oficiales
+│   ├── ed25519_sign.py                # ✅ RFC 8032 Ed25519, validado con vectores oficiales
+│   └── rf_config_loader.py            # ✅ Loader que valida rf_config.yaml -> CryptoConfig
+├── config/
+│   └── rf_config.yaml                 # ✅ Sección crypto: + rf: + storage: + dtn:
 └── specs/
     └── PROPOSALS-10.md                # Especificación de las 10 propuestas
 ```
@@ -166,6 +170,7 @@ ISO/IEC 27037 (cadena de custodia de evidencia digital).
 | 5 | `crypto_layer/argon2_derive.py` | Derivación con profile + async | ✅ Generado (tiempo pendiente de validar en RPi 4) |
 | 6 | `crypto_layer/hkdf_expand.py` | Expansión de subclaves (RFC 5869) | ✅ Generado, validado contra vectores oficiales |
 | 7 | `crypto_layer/ed25519_sign.py` | Firma/verificación de `.vtrc` | ✅ Generado, validado contra vectores oficiales RFC 8032 |
+| 8 | `config/rf_config.yaml` | Sección `crypto:` + RF + storage + DTN | ✅ Generado + loader separado |
 | 6 | `crypto_layer/hkdf_expand.py` | Expansión de subclaves | Pendiente |
 | 7 | `crypto_layer/ed25519_sign.py` | Firma/verificación de `.vtrc` | Pendiente |
 | 8 | `config/rf_config.yaml` | Sección `crypto:` parametrizada | Pendiente |

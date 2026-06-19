@@ -1,0 +1,59 @@
+# VTR Continuity v0.5.0 — Runtime configuration
+# Cambios aquí no requieren recompilación.
+#
+# Validado por crypto_layer/rf_config_loader.py al boot — un profile fuera
+# de catálogo, un campo faltante, o un valor fuera de rango hace que el
+# loader falle de forma explícita (VTR-CRYPTO-001 §1.2, decisión 2D), nunca
+# silenciosamente.
+
+crypto:
+  argon2id_profile: desktop          # embedded | desktop | hardened — catálogo cerrado
+  ed25519_public_key_path: /etc/vtr/ca_intermediate.pub
+  device_secret_path: /etc/vtr/device_secret  # VTR-CRYPTO-002: diseño pendiente, ver nota abajo
+  hardware_id_source: /proc/cpuinfo  # o ruta de eFuse en hardware con esa capacidad
+  session_cache_ttl_seconds: 3600
+  derivation_async: true             # async en boot — decisión 2D, no bloquea el proxy DMZ
+
+rf:
+  lora:
+    frequency_mhz: 915               # ISM, Ruta A — ver VTR-RD-005
+    tx_power_dbm: 14
+    spreading_factor: 9
+    bandwidth_khz: 125
+    duty_cycle_percent: 1.0          # ISM compliance
+  ble:
+    enabled: true
+    mesh_role: relay                 # relay | leaf — ver topología BLE Mesh del proyecto
+  sneakernet:
+    enabled: true
+    bundle_max_size_mb: 64
+
+storage:
+  guardian:
+    warn_threshold_percent: 80       # VTR-SEC-001 S#2 — alerta antes de saturar SQLite
+    purge_threshold_percent: 95      # purga forzada FIFO al alcanzar este umbral
+    purge_policy: fifo               # único valor soportado en v0.5.0
+
+dtn:
+  bundle_protocol_version: 7         # RFC 9171
+  max_bundle_size_kb: 1024
+  max_ttl_seconds: 86400
+  max_hop_count: 10
+
+# ──────────────────────────────────────────────────────────────────────────
+# NOTAS DE ESTADO — no eliminar al editar este archivo en producción
+# ──────────────────────────────────────────────────────────────────────────
+#
+# device_secret_path (crypto.device_secret_path): la partición read-only
+# firmada por CA que debería contener este archivo es DISEÑO PENDIENTE
+# (VTR-CRYPTO-002, VTR-CRYPTO-001 §8) — no implementada aún. El loader NO
+# falla si el archivo no existe en esta ruta al momento de cargar el YAML
+# (eso sería validar disponibilidad de un mecanismo que no existe); falla
+# únicamente si el VALOR del campo es del tipo incorrecto o está vacío.
+# La verificación de que el archivo realmente existe y es legible ocurre
+# en tiempo de uso real (cuando CryptoLayer.derive_device_key() lo necesita),
+# no en tiempo de carga de configuración.
+#
+# Custodios SSS de la CA root (VTR-PKI-001 §4.3, partes 2-5): pendiente
+# operativo, no representado en este archivo — la custodia de la CA root
+# vive fuera del runtime config del dispositivo, en el bench de provisioning.
