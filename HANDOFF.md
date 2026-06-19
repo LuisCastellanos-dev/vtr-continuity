@@ -141,25 +141,31 @@ backlog:
 | 4 | `crypto_layer/__init__.py` | API pública (CryptoLayer + CryptoConfig) | ✅ Generado |
 | 5 | `crypto_layer/argon2_derive.py` | Derivación con profile + async | ✅ Generado (criterio de tiempo pendiente de validar en RPi 4 real) |
 | 6 | `crypto_layer/hkdf_expand.py` | Expansión de subclaves (RFC 5869) | ✅ Generado, validado contra 2 vectores oficiales del RFC |
-| 7 | `crypto_layer/ed25519_sign.py` | Firma/verificación de `.vtrc` | Pendiente |
+| 7 | `crypto_layer/ed25519_sign.py` | Firma/verificación de `.vtrc` | ✅ Generado, validado contra 2 vectores oficiales RFC 8032 |
 | 8 | `config/rf_config.yaml` | Sección `crypto:` | Pendiente |
 | 9 | `tests/test_crypto_layer.py` | Tests felices + ≥15 adversariales | Pendiente |
 | 10 | `docs/DOD-v0.5.0.md` | Definition of Done actualizado | Pendiente |
 
-**Estado:** 6 de 10 propuestas generadas. Siguiente: #7 (`crypto_layer/ed25519_sign.py`).
+**Estado:** 7 de 10 propuestas generadas. Siguiente: #8 (`config/rf_config.yaml`).
 
-> **Nota sobre la propuesta #6:** validado contra los vectores oficiales
-> de RFC 5869 Apéndice A (Test Case 1 y Test Case 2 para SHA-256) — el
-> resultado coincide byte por byte con el OKM esperado del estándar, no
-> es una aproximación. Se separó la implementación pura (`_hkdf_expand_raw`,
-> sin validación de inputs específicos de VTR) de la capa pública
-> (`hkdf_expand`, con validación completa) para que los tests de vectores
-> oficiales (propuesta #9) puedan ejercer la primitiva exacta del RFC sin
-> que un cambio futuro en las reglas de validación de VTR rompa
-> accidentalmente la conformidad con el estándar. Integración end-to-end
-> verificada: `CryptoLayer.expand_subkey()` produce session keys y
-> transport keys (LoRa, BLE) distintos entre sí desde la misma master_key,
-> a través de la ruta completa de producción.
+> **Nota sobre la propuesta #7:** se decidió desacoplar la canonicalización
+> del bundle `.vtrc` (formato header||payload||metadata, campo signature
+> en ceros antes de firmar) de la primitiva Ed25519 misma. `ed25519_sign.py`
+> opera sobre bytes genéricos sin conocer la estructura del bundle —
+> mismas funciones (`generate_keypair`, `sign`, `verify`) sirven tanto para
+> firmar bundles `.vtrc` como para la firma subyacente de certificados
+> X.509 en VTR-PKI-001 o CRLs distribuidas como bundle `crl-update`, sin
+> acoplar el módulo criptográfico base a un formato específico. El módulo
+> que arma el formato canonical del bundle `.vtrc` real queda como diseño
+> pendiente — mismo estado que `device_secret` (VTR-CRYPTO-002). Validado
+> contra 2 vectores oficiales de RFC 8032 (Apéndice 7.1, Test 1 con mensaje
+> vacío y Test 2 con mensaje de 1 byte) — coincidencia exacta byte por
+> byte de la firma calculada. Se confirmó también el caso de seguridad más
+> crítico del criterio de aceptación: la verificación rechaza
+> correctamente un bundle modificado tras la firma, y `verify()` nunca
+> lanza excepción ante una firma inválida (retorna `False`, contrato
+> documentado en `SignatureVerificationError`). Integración end-to-end
+> confirmada a través de `CryptoLayer.sign_bundle`/`verify_bundle`.
 
 > **Nota sobre la propuesta #5:** al validar contra la librería real
 > (`cryptography` ≥45.0), se detectó que el catálogo de profiles original
