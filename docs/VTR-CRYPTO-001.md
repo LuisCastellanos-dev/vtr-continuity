@@ -103,7 +103,7 @@ key = hashlib.sha256(passphrase.encode()).digest()  # vulnerable a rainbow table
 # CORRECTO — Argon2id con profile catalogado
 from cryptography.hazmat.primitives.kdf.argon2 import Argon2id
 kdf = Argon2id(salt=device_secret, length=32, iterations=3,
-                lanes=4, memory_cost=64*1024)  # profile "desktop"
+                lanes=1, memory_cost=64*1024)  # profile "desktop"
 key = kdf.derive(passphrase.encode())
 ```
 

@@ -71,6 +71,21 @@ cada opción evaluada. Resumen:
 > operativo**, sujeto a logística propia del despliegue — no resuelto por
 > este documento.
 
+> **Notas sobre el diseño de `crypto_layer/__init__.py`:** dos ambigüedades
+> de la especificación original se resolvieron con criterio explícito de
+> seguridad, no por conveniencia de implementación:
+> - `derive_device_key_async` recibe `hardware_id` y `device_secret` como
+>   parámetros explícitos en cada llamada (misma firma que la versión
+>   síncrona), en vez de leerlos desde un estado interno cacheado — limita
+>   la ventana de exposición de bytes sensibles en memoria y evita
+>   resultados inconsistentes si el estado interno cambiara entre llamadas.
+> - `CryptoConfig` es un dataclass plano sin método `from_yaml()` — la
+>   validación del catálogo cerrado de profiles y el parsing de
+>   `rf_config.yaml` quedan en una capa de configuración separada
+>   (propuesta #8), de forma que `CryptoLayer` nunca procesa texto de un
+>   archivo de configuración que pudiera haber sido modificado por un
+>   actor con acceso al sistema de archivos.
+
 ---
 
 ## 🆕 Cuatro reglas de criptografía permanentes
@@ -123,15 +138,42 @@ backlog:
 | 1 | `docs/VTR-CRYPTO-001.md` | Reglas cripto consolidadas (4, incluye VTR-CRYPTO-004) | ✅ Generado |
 | 2 | `docs/VTR-PKI-001.md` | Esquema PKI dos niveles + custodia SSS 3-de-5 de la root | ✅ Generado |
 | 3 | `crypto_layer/errors.py` | Jerarquía de excepciones (21 clases, incluye categoría CustodyError) | ✅ Generado |
-| 4 | `crypto_layer/__init__.py` | API pública | Pendiente |
-| 5 | `crypto_layer/argon2_derive.py` | Derivación con profile + async | Pendiente |
+| 4 | `crypto_layer/__init__.py` | API pública (CryptoLayer + CryptoConfig) | ✅ Generado |
+| 5 | `crypto_layer/argon2_derive.py` | Derivación con profile + async | ✅ Generado (criterio de tiempo pendiente de validar en RPi 4 real) |
 | 6 | `crypto_layer/hkdf_expand.py` | Expansión de subclaves | Pendiente |
 | 7 | `crypto_layer/ed25519_sign.py` | Firma/verificación de `.vtrc` | Pendiente |
 | 8 | `config/rf_config.yaml` | Sección `crypto:` | Pendiente |
 | 9 | `tests/test_crypto_layer.py` | Tests felices + ≥15 adversariales | Pendiente |
 | 10 | `docs/DOD-v0.5.0.md` | Definition of Done actualizado | Pendiente |
 
-**Estado:** 3 de 10 propuestas generadas. Siguiente: #4 (`crypto_layer/__init__.py`).
+**Estado:** 5 de 10 propuestas generadas. Siguiente: #6 (`crypto_layer/hkdf_expand.py`).
+
+> **Nota sobre la propuesta #5:** al validar contra la librería real
+> (`cryptography` ≥45.0), se detectó que el catálogo de profiles original
+> usaba `lanes=4` en los tres niveles, mismo valor que VTR-CRYPTO-001 ya
+> tenía documentado como ejemplo "correcto". Una medición real de tiempo
+> en el entorno de generación (1 núcleo de CPU) mostró 300ms para el
+> profile "desktop" con `lanes=4` — por encima del presupuesto de <250ms
+> que exige el criterio de aceptación de la propuesta. Investigación
+> adicional mostró que fuentes recientes (2025-2026) sobre el perfil OWASP
+> 2024 difieren entre sí, y que el propio OWASP Cheat Sheet Series base
+> recomienda 1 grado de paralelismo, no 4. Se corrigió `lanes=1` en los
+> tres profiles (embedded, desktop, hardened) — tanto en
+> `argon2_derive.py` como en el ejemplo de código de VTR-CRYPTO-001 — por
+> consistencia y porque el paralelismo dimensiona costo computacional al
+> hardware del defensor, no es el principal factor de resistencia
+> criptográfica (ese rol lo cumple `memory_kib`, sin cambios). Con
+> `lanes=1` el tiempo medido mejoró a 275ms, **pero sigue sin cumplir el
+> presupuesto de 250ms en este entorno de 1 núcleo**. La causa identificada
+> es la limitación de hardware del entorno de prueba (Xeon de 1 núcleo),
+> no necesariamente el profile — el RPi 4 objetivo tiene 4 núcleos físicos
+> y podría comportarse distinto. **El criterio de aceptación de tiempo
+> queda explícitamente como pendiente de validación en hardware RPi 4
+> real**, documentado tanto en el código como aquí, no asumido como
+> resuelto. Si en RPi 4 real tampoco cumple, la guía documentada en
+> `argon2_derive.py` es reducir `iterations` de 3 a 2 antes de tocar
+> `memory_kib`, ya que la memoria es el parámetro con mayor impacto real
+> en la resistencia al cracking.
 
 El orden de generación sigue un criterio explícito: se prioriza lo que pueda
 refinar o modificar cualquier fase previa y reduzca el riesgo del conjunto.

@@ -1,9 +1,14 @@
 # VTR Continuity — Estado del Proyecto v0.5.0
 
-> **Estado:** 3 de 10 propuestas de la fase criptográfica generadas y
-> aprobadas: `docs/VTR-CRYPTO-001.md`, `docs/VTR-PKI-001.md`,
-> `crypto_layer/errors.py`. Siguiente entregable: propuesta #4
-> (`crypto_layer/__init__.py`, API pública).
+> **Estado:** 5 de 10 propuestas de la fase criptográfica generadas:
+> `docs/VTR-CRYPTO-001.md`, `docs/VTR-PKI-001.md`, `crypto_layer/errors.py`,
+> `crypto_layer/__init__.py`, `crypto_layer/argon2_derive.py`. La #5
+> corrigió el parámetro `lanes` de Argon2id de 4 a 1 en los tres profiles
+> tras detectar, con medición real, que excedía el presupuesto de tiempo
+> documentado — el criterio de aceptación de tiempo (<250ms en RPi 4)
+> queda explícitamente pendiente de validación en hardware real, no
+> asumido como resuelto. Siguiente entregable: propuesta #6
+> (`crypto_layer/hkdf_expand.py`).
 
 ---
 
@@ -34,7 +39,9 @@ vtr-continuity/
 │   ├── VTR-CRYPTO-001.md              # ✅ 4 reglas cripto + librerías verificadas
 │   └── VTR-PKI-001.md                 # ✅ PKI dos niveles + custodia SSS 3-de-5
 ├── crypto_layer/
-│   └── errors.py                      # ✅ 21 excepciones, 5 categorías
+│   ├── errors.py                      # ✅ 21 excepciones, 5 categorías
+│   ├── __init__.py                    # ✅ API pública — CryptoLayer, CryptoConfig
+│   └── argon2_derive.py               # ✅ Profiles embedded/desktop/hardened, lanes=1
 └── specs/
     └── PROPOSALS-10.md                # Especificación de las 10 propuestas
 ```
@@ -151,8 +158,8 @@ ISO/IEC 27037 (cadena de custodia de evidencia digital).
 | 1 | `docs/VTR-CRYPTO-001.md` | Reglas cripto consolidadas | ✅ Generado |
 | 2 | `docs/VTR-PKI-001.md` | Esquema PKI + custodia SSS | ✅ Generado |
 | 3 | `crypto_layer/errors.py` | Jerarquía de excepciones | ✅ Generado |
-| 4 | `crypto_layer/__init__.py` | API pública | Pendiente |
-| 5 | `crypto_layer/argon2_derive.py` | Derivación con profile + async | Pendiente |
+| 4 | `crypto_layer/__init__.py` | API pública (CryptoLayer + CryptoConfig) | ✅ Generado |
+| 5 | `crypto_layer/argon2_derive.py` | Derivación con profile + async | ✅ Generado (tiempo pendiente de validar en RPi 4) |
 | 6 | `crypto_layer/hkdf_expand.py` | Expansión de subclaves | Pendiente |
 | 7 | `crypto_layer/ed25519_sign.py` | Firma/verificación de `.vtrc` | Pendiente |
 | 8 | `config/rf_config.yaml` | Sección `crypto:` parametrizada | Pendiente |
