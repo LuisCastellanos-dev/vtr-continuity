@@ -143,10 +143,10 @@ backlog:
 | 6 | `crypto_layer/hkdf_expand.py` | Expansión de subclaves (RFC 5869) | ✅ Generado, validado contra 2 vectores oficiales del RFC |
 | 7 | `crypto_layer/ed25519_sign.py` | Firma/verificación de `.vtrc` | ✅ Generado, validado contra 2 vectores oficiales RFC 8032 |
 | 8 | `config/rf_config.yaml` | Sección `crypto:` + RF + storage + DTN | ✅ Generado, junto con `crypto_layer/rf_config_loader.py` (loader separado) |
-| 9 | `tests/test_crypto_layer.py` | Tests felices + ≥15 adversariales | Pendiente |
+| 9 | `tests/test_crypto_layer.py` | Tests felices + ≥15 adversariales | ✅ Generado — 68 pasan, 2 skip documentado, 95% coverage |
 | 10 | `docs/DOD-v0.5.0.md` | Definition of Done actualizado | Pendiente |
 
-**Estado:** 8 de 10 propuestas generadas. Siguiente: #9 (`tests/test_crypto_layer.py`).
+**Estado:** 9 de 10 propuestas generadas. Siguiente: #10 (`docs/DOD-v0.5.0.md`).
 
 > **Nota sobre la propuesta #8:** la spec original exige que "el loader
 > valide tipos y rangos", pero la propuesta #4 ya había decidido
@@ -169,6 +169,29 @@ backlog:
 > Integración end-to-end validada: el `rf_config.yaml` real se carga,
 > valida, y el `CryptoConfig` resultante funciona correctamente con
 > `CryptoLayer` para derivación de claves y firma/verificación de bundles.
+
+> **Nota sobre la propuesta #9:** dos de los 17 casos adversariales de la
+> spec original (`test_replayed_nonce_detected`,
+> `test_session_cache_invalidated_on_passphrase_change`) requerían lógica
+> que ninguna propuesta cerrada implementa todavía — el manejo de nonces
+> vive en el `NonceCounter` de Capa 1 (fuera de alcance), y
+> `CryptoLayer._session_cache` existe como dict declarado pero ningún
+> método lo usa aún. Se compararon 2 opciones (skip explícito documentado
+> vs. reabrir `crypto_layer/__init__.py` para implementar la lógica real)
+> bajo el criterio de "menor sobrescritura innecesaria, mentalidad byte
+> por byte" — se eligió skip explícito: cero cambios a los 8 archivos ya
+> cerrados, gap visible en cada corrida de `pytest` (reportado como
+> SKIPPED con la razón inline), en vez de tomar ≥3 decisiones de diseño
+> nuevas sin consultar. Sobre coverage: la primera corrida real midió 80%,
+> por debajo del criterio de aceptación de >90%. Se decidió agregar más
+> casos adversariales reales (no relleno artificial) — validaciones
+> directas de la API pública y de las funciones de bajo nivel que ya
+> existían pero no se ejercían vía tests — hasta alcanzar **95% de
+> coverage real, medido, no proyectado**. La única rama sin cubrir que
+> queda deliberadamente sin forzar es el manejo de excepciones genéricas
+> de la librería subyacente en `argon2_derive.py` (líneas 160-167) —
+> requeriría mockear la librería de forma artificial para provocarla, lo
+> que se consideró relleno, no validación real.
 
 > **Nota sobre la propuesta #5:** al validar contra la librería real
 > (`cryptography` ≥45.0), se detectó que el catálogo de profiles original

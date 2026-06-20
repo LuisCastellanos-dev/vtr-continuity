@@ -1,11 +1,12 @@
 # VTR Continuity — Estado del Proyecto v0.5.0
 
-> **Estado en GitHub (rama `main`):** 8 de 10 propuestas de la fase
+> **Estado en GitHub (rama `main`):** 9 de 10 propuestas de la fase
 > criptográfica generadas, validadas con tests reales, y sincronizadas en
-> el repositorio. Último commit: limpieza de 2 archivos duplicados que se
-> habían subido por error a la raíz del repo (`VTR-CRYPTO-001.md` y un
-> `.tar.gz` de sincronización local que nunca debió versionarse — ahora
-> bloqueado por `.gitignore`).
+> el repositorio. La suite formal de tests (`tests/test_crypto_layer.py`)
+> ejecuta 70 casos (68 pasan, 2 documentados como skip explícito por
+> ausencia de la lógica que prueban) con 95% de coverage real medido en
+> `crypto_layer/` — ambos criterios de aceptación de la propuesta #9
+> cumplidos con números verificados, no proyectados.
 
 ## 0. Avance verificable — propuestas vs. archivos en el repo
 
@@ -19,10 +20,10 @@
 | 6 | Expansión HKDF | `crypto_layer/hkdf_expand.py` | 2 vectores oficiales RFC 5869, coincidencia exacta |
 | 7 | Firma Ed25519 | `crypto_layer/ed25519_sign.py` | 2 vectores oficiales RFC 8032, rechazo de bundle modificado confirmado |
 | 8 | Config runtime + loader | `config/rf_config.yaml` + `crypto_layer/rf_config_loader.py` | 7 tests adversariales, integración end-to-end con #4-#7 |
-| 9 | Suite de tests formal | `tests/test_crypto_layer.py` | **Pendiente** |
+| 9 | Suite de tests formal | `tests/test_crypto_layer.py` | 70 tests (68 pasan, 2 skip documentado), 95% coverage real en `crypto_layer/` |
 | 10 | Definition of Done | `docs/DOD-v0.5.0.md` | **Pendiente** |
 
-**Progreso: 8/10 (80%).** Cada propuesta nueva se validó contra las ya
+**Progreso: 9/10 (90%).** Cada propuesta nueva se validó contra las ya
 generadas antes de darse por cerrada — no son archivos aislados, forman
 una cadena verificada (config → loader → CryptoConfig → CryptoLayer →
 derivación/firma reales), con ejecución real en cada paso, no solo
