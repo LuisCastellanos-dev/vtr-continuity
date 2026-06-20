@@ -45,11 +45,11 @@ ambas cosas explícitamente para no confundir "fase cripto cerrada" con
 | Storage | `storage_guardian.py` (purga FIFO, umbrales 80%/95%) | ⬜ PENDIENTE | No existe en el repositorio. Parámetros ya están definidos en `rf_config.yaml` (`storage.guardian.warn_threshold_percent`, `purge_threshold_percent`, `purge_policy: fifo`), pero el módulo que los consume no se ha escrito. |
 | Provisioning | Bench air-gapped funcional | ⬜ PENDIENTE | Decisión 3A aprobada (provisioning en bench, sin red). Es una decisión de diseño, no un bench físico operativo verificado. |
 | Provisioning | `device_registry.vtrdb` con append-only log + cifrado LUKS | ⬜ PENDIENTE | No existe `vtr-provision.py` ni `device_registry.vtrdb` en el repositorio. |
-| Preguntas | Q-01/Q-02/Q-03 con decisión documentada | ⬜ PENDIENTE | Las tres siguen abiertas. Ver §3. |
+| Preguntas | Q-01/Q-02/Q-03 con decisión documentada | ✅ COMPLETADO | `docs/VTR-ARCH-DECISIONS-001.md` — decisión documentada para las tres; ninguna implementada todavía como código |
 | Documentación | STRIDE en `docs/VTR-THREAT-001.md` | ⬜ PENDIENTE | No existe en el repositorio. Omisión O#7 sigue sin cerrar. |
 | Documentación | Mapeo a IEC 62443 / NERC CIP | 🟡 PARCIAL | Referencias puntuales ya citadas inline en `VTR-CRYPTO-001.md` y `VTR-PKI-001.md` (SR 1.1, 1.5, 1.8, 2.1, CR 1.5). Falta el documento consolidado de mapeo cláusula-por-cláusula (E9/E10/E11). |
 
-**Resumen cuantitativo:** 7 ✅ completados / 4 🟡 parciales / 6 ⬜ pendientes,
+**Resumen cuantitativo:** 8 ✅ completados / 4 🟡 parciales / 5 ⬜ pendientes,
 de 17 bloques totales del DoD.
 
 ---
@@ -75,26 +75,40 @@ la distinción.
 
 ---
 
-## 3. Preguntas abiertas — sin resolver
+## 3. Preguntas abiertas — decisión documentada, implementación pendiente
 
 Las tres preguntas arquitectónicas identificadas en el roadmap (E1/E2/E3,
-prioridad P0) permanecen sin decisión documentada:
+prioridad P0) ya tienen **decisión documentada** en
+`docs/VTR-ARCH-DECISIONS-001.md`. Ninguna está implementada como código
+todavía — este documento registra el razonamiento y la decisión tomada,
+no el artefacto final.
 
-- **Q-01** — Detección de nodo muerto en red decentralizada (¿cómo distingue
-  el sistema un nodo apagado de uno aislado por jamming, sin asumir
-  conectividad para preguntarle?).
-- **Q-02** — Paradoja de reset de RTC + replay de nonce (si el reloj de un
-  nodo se reinicia tras un corte de energía prolongado y el `NonceCounter`
-  es monótono pero persistido localmente, ¿cómo se evita una ventana de
-  replay sin depender de NTP, que es justamente lo que falla en escenario
-  air-gapped?).
-- **Q-03** — Interfaz de configuración en campo como superficie de ataque
-  (si el RPi necesita reconfigurarse en sitio sin acceso a la red, ¿qué
-  interfaz se expone y cómo se protege de ser el vector de entrada?).
+- **Q-01** — Detección de nodo muerto en red decentralizada. **Decisión:**
+  heartbeat pasivo inferido de la progresión del `NonceCounter` ya
+  existente en `core/crypto_transport.py`, sin mensaje dedicado (evita
+  romper la propiedad de no-correlación temporal que `GhostScheduler` ya
+  garantiza). Estado nuevo propuesto: `SUSPECTED_DOWN`, distinto de
+  `DOWN` — el sistema notifica, no decide unilateralmente entre nodo
+  apagado y nodo aislado por jamming, porque ambos son indistinguibles
+  desde el observador remoto.
+- **Q-02** — Paradoja de reset de RTC + replay de nonce. **Decisión:** el
+  par `(node_id, counter)` viaja dentro del bundle `.vtrc` mismo; el
+  receptor compara contra su propia tabla de "último counter visto", no
+  contra el RTC del nodo. Extiende la misma lógica que `ReplayWindow` ya
+  usa para sesiones en vivo al caso sneakernet sin sesión. Define un
+  requisito concreto para el formato de bundle `.vtrc` (próximo punto del
+  checklist): el header debe incluir ese campo desde el diseño inicial.
+- **Q-03** — Interfaz de configuración en campo como superficie de
+  ataque. **Decisión:** la configuración de campo se trata como un
+  bundle firmado con la clave de la `intermediate` CA (la misma PKI de
+  `VTR-PKI-001.md`), verificada antes de llegar a
+  `crypto_layer/rf_config_loader.py` — no como confianza implícita por
+  ubicación física o por PIN local.
 
-Ninguna tiene impacto directo en las 9 propuestas de código ya cerradas,
-pero las tres son bloqueantes para diseño de Capa 1 (transporte) en
-producción real, no solo en el entorno de pruebas actual.
+Las tres decisiones comparten un principio explícito: ninguna introduce
+una primitiva criptográfica o un mecanismo de confianza nuevo — las tres
+reutilizan estructuras ya validadas en las propuestas #1–#9
+(`NonceCounter`, PKI de dos niveles, `ed25519_sign.py`).
 
 ---
 
@@ -138,7 +152,20 @@ de campo — no para considerar cerrada la fase cripto, que ya lo está.
   append-only log y cifrado LUKS.
 - [ ] Setup del bench air-gapped físico (decisión 3A ya aprobada, sin
   ejecución verificada).
-- [ ] Documentar decisión arquitectónica para Q-01, Q-02 y Q-03.
+- [x] ~~Documentar decisión arquitectónica para Q-01, Q-02 y Q-03.~~
+  **COMPLETADO** — ver `docs/VTR-ARCH-DECISIONS-001.md`. Implementación
+  real de cada decisión sigue pendiente y se desagrega en los tres puntos
+  siguientes, no incluidos en el conteo original de 14:
+  - [ ] Implementar máquina de estados de liveness (`ALIVE` /
+    `SUSPECTED_DOWN`) y campo `heartbeat_timeout_seconds` en
+    `rf_config.yaml` (Q-01).
+  - [ ] Incluir campo `(node_id, counter)` en el header del formato de
+    bundle `.vtrc` y tabla de verificación de "último counter visto"
+    (Q-02) — requisito de entrada directa para el siguiente punto de este
+    checklist.
+  - [ ] Implementar paso de verificación de firma Ed25519 (clave
+    `intermediate`) en el punto de entrada de configuración de campo,
+    antes de `rf_config_loader.py` (Q-03).
 - [ ] Generar `docs/VTR-THREAT-001.md` con modelo STRIDE completo.
 - [ ] Sesión de fuzzing UART Heltec + LoRa simulado (`VTR-FUZ-001`).
 - [ ] Site survey RF en ≥2 ubicaciones industriales/portuarias reales

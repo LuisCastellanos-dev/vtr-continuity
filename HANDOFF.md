@@ -156,7 +156,43 @@ backlog:
 > cada caso, y deja un checklist de 14 puntos pre-release que nunca
 > estuvieron dentro del alcance de estas 10 propuestas (provisioning
 > operativo real, `storage_guardian.py`, STRIDE, tests Jest del stack RF,
-> site survey RF, Q-01/Q-02/Q-03 sin resolver, entre otros).
+> site survey RF, entre otros). El primero de esos 14 puntos — decisión
+> documentada para Q-01/Q-02/Q-03 — ya se cerró, ver siguiente sección.
+
+### 🧭 Q-01/Q-02/Q-03 — decisión documentada (`docs/VTR-ARCH-DECISIONS-001.md`)
+
+Las tres preguntas arquitectónicas del roadmap (E1/E2/E3) ya tienen
+decisión documentada. Ninguna está implementada como código todavía —
+el documento registra el razonamiento, no el artefacto final. Se
+generaron leyendo completo el código real de Capa 1
+(`core/crypto_transport.py`) y Capa 2 (`core/dtn_fragmenter.py`) para no
+proponer nada que contradijera lo ya cerrado.
+
+- **Q-01** (nodo muerto): heartbeat **pasivo** inferido de la progresión
+  del `NonceCounter` ya existente, sin mensaje dedicado — un heartbeat
+  explícito sería un patrón temporal predecible, justo lo que
+  `GhostScheduler` ya existe para evitar. Estado nuevo: `SUSPECTED_DOWN`,
+  no `DOWN` — nodo apagado y nodo aislado por jamming son indistinguibles
+  desde el observador remoto, así que el sistema notifica en vez de
+  decidir unilateralmente.
+- **Q-02** (RTC + replay): el par `(node_id, counter)` viaja **dentro**
+  del bundle `.vtrc`, no se infiere del receptor ni del RTC. El receptor
+  compara contra su propia tabla de "último counter visto" — extiende la
+  misma lógica que `ReplayWindow` ya usa en sesión viva al caso
+  sneakernet sin sesión. **Define un requisito concreto para el formato
+  de bundle `.vtrc`** (siguiente propuesta en el checklist): el header
+  debe incluir ese campo desde el diseño inicial, no como adición
+  posterior.
+- **Q-03** (config en campo): la configuración de campo se trata como un
+  bundle firmado con la clave de la `intermediate` CA — la misma PKI de
+  `VTR-PKI-001.md` — verificado antes de llegar a
+  `crypto_layer/rf_config_loader.py`. No se introduce un PIN/secreto
+  local paralelo; se reutiliza la cadena de confianza ya validada.
+
+Las tres decisiones comparten un criterio explícito: ninguna introduce
+una primitiva criptográfica o mecanismo de confianza nuevo — las tres
+reutilizan `NonceCounter`, la PKI de dos niveles, y `ed25519_sign.py` ya
+validados en las propuestas #1–#9.
 
 > **Nota sobre la propuesta #8:** la spec original exige que "el loader
 > valide tipos y rangos", pero la propuesta #4 ya había decidido

@@ -39,6 +39,18 @@ solo revisión visual del código.
 
 ---
 
+## 0.1 Avance del checklist pre-release (post-#10)
+
+> El checklist completo de 14 puntos vive en `docs/DOD-v0.5.0.md` §5. Esta
+> sección rastrea avance puntual a medida que se cierran ítems — no
+> reemplaza al DOD, lo complementa.
+
+| Ítem del checklist | Estado | Evidencia |
+|---|---|---|
+| Decisión arquitectónica Q-01/Q-02/Q-03 documentada | ✅ COMPLETADO | `docs/VTR-ARCH-DECISIONS-001.md` — heartbeat pasivo vía `NonceCounter` (Q-01), counter dentro del bundle `.vtrc` en vez de RTC (Q-02), config de campo firmada por PKI existente (Q-03). Ninguna introduce primitiva criptográfica nueva — las tres reusan `NonceCounter`, PKI de dos niveles, y `ed25519_sign.py` ya validados. |
+
+
+
 ## 1. Alcance del proyecto
 
 VTR Continuity es la capa de continuidad de comunicación para entornos
@@ -64,7 +76,9 @@ vtr-continuity/
 │   ├── ROADMAP-v0.5.0.md              # Plan en 5 épicas con prioridades
 │   ├── DECISIONS-v0.5.0.md            # Pro/cons de cada decisión técnica
 │   ├── VTR-CRYPTO-001.md              # ✅ 4 reglas cripto + librerías verificadas
-│   └── VTR-PKI-001.md                 # ✅ PKI dos niveles + custodia SSS 3-de-5
+│   ├── VTR-PKI-001.md                 # ✅ PKI dos niveles + custodia SSS 3-de-5
+│   ├── DOD-v0.5.0.md                  # ✅ Definition of Done — propuesta #10
+│   └── VTR-ARCH-DECISIONS-001.md      # ✅ Q-01/Q-02/Q-03 — decisiones documentadas
 ├── crypto_layer/
 │   ├── errors.py                      # ✅ 21 excepciones, 5 categorías
 │   ├── __init__.py                    # ✅ API pública — CryptoLayer, CryptoConfig
