@@ -1,12 +1,20 @@
 # VTR Continuity — Estado del Proyecto v0.5.0
 
-> **Estado en GitHub (rama `main`):** 9 de 10 propuestas de la fase
+> **Estado en GitHub (rama `main`):** 10 de 10 propuestas de la fase
 > criptográfica generadas, validadas con tests reales, y sincronizadas en
 > el repositorio. La suite formal de tests (`tests/test_crypto_layer.py`)
 > ejecuta 70 casos (68 pasan, 2 documentados como skip explícito por
 > ausencia de la lógica que prueban) con 95% de coverage real medido en
 > `crypto_layer/` — ambos criterios de aceptación de la propuesta #9
 > cumplidos con números verificados, no proyectados.
+>
+> **100% de la fase criptográfica ≠ v0.5.0 lista para piloto.** El cierre
+> de las 10 propuestas certifica el código y los documentos que estaban
+> dentro de su alcance original. El estado real frente al Definition of
+> Done completo — incluyendo bloques pendientes fuera de esas 10
+> propuestas (provisioning operativo, `storage_guardian.py`, modelo STRIDE,
+> tests Jest del stack RF, site survey) — vive en
+> `docs/DOD-v0.5.0.md`.
 
 ## 0. Avance verificable — propuestas vs. archivos en el repo
 
@@ -21,13 +29,13 @@
 | 7 | Firma Ed25519 | `crypto_layer/ed25519_sign.py` | 2 vectores oficiales RFC 8032, rechazo de bundle modificado confirmado |
 | 8 | Config runtime + loader | `config/rf_config.yaml` + `crypto_layer/rf_config_loader.py` | 7 tests adversariales, integración end-to-end con #4-#7 |
 | 9 | Suite de tests formal | `tests/test_crypto_layer.py` | 70 tests (68 pasan, 2 skip documentado), 95% coverage real en `crypto_layer/` |
-| 10 | Definition of Done | `docs/DOD-v0.5.0.md` | **Pendiente** |
+| 10 | Definition of Done | `docs/DOD-v0.5.0.md` | 7 bloques completados, 4 parciales, 6 pendientes — ver §0 del documento |
 
-**Progreso: 9/10 (90%).** Cada propuesta nueva se validó contra las ya
-generadas antes de darse por cerrada — no son archivos aislados, forman
-una cadena verificada (config → loader → CryptoConfig → CryptoLayer →
-derivación/firma reales), con ejecución real en cada paso, no solo
-revisión visual del código.
+**Progreso: 10/10 (100%) de la fase criptográfica.** Cada propuesta nueva se
+validó contra las ya generadas antes de darse por cerrada — no son archivos
+aislados, forman una cadena verificada (config → loader → CryptoConfig →
+CryptoLayer → derivación/firma reales), con ejecución real en cada paso, no
+solo revisión visual del código.
 
 ---
 

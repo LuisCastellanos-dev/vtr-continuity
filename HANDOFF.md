@@ -144,9 +144,19 @@ backlog:
 | 7 | `crypto_layer/ed25519_sign.py` | Firma/verificación de `.vtrc` | ✅ Generado, validado contra 2 vectores oficiales RFC 8032 |
 | 8 | `config/rf_config.yaml` | Sección `crypto:` + RF + storage + DTN | ✅ Generado, junto con `crypto_layer/rf_config_loader.py` (loader separado) |
 | 9 | `tests/test_crypto_layer.py` | Tests felices + ≥15 adversariales | ✅ Generado — 68 pasan, 2 skip documentado, 95% coverage |
-| 10 | `docs/DOD-v0.5.0.md` | Definition of Done actualizado | Pendiente |
+| 10 | `docs/DOD-v0.5.0.md` | Definition of Done actualizado | ✅ Generado |
 
-**Estado:** 9 de 10 propuestas generadas. Siguiente: #10 (`docs/DOD-v0.5.0.md`).
+**Estado:** 10 de 10 propuestas generadas. Fase criptográfica cerrada al
+100%.
+
+> **Nota sobre el cierre de la fase:** 10/10 propuestas generadas no
+> equivale a v0.5.0 lista para piloto de campo. `docs/DOD-v0.5.0.md`
+> reclasifica el Definition of Done original bloque por bloque
+> (✅ completado / 🟡 parcial / ⬜ pendiente) con evidencia real citada en
+> cada caso, y deja un checklist de 14 puntos pre-release que nunca
+> estuvieron dentro del alcance de estas 10 propuestas (provisioning
+> operativo real, `storage_guardian.py`, STRIDE, tests Jest del stack RF,
+> site survey RF, Q-01/Q-02/Q-03 sin resolver, entre otros).
 
 > **Nota sobre la propuesta #8:** la spec original exige que "el loader
 > valide tipos y rangos", pero la propuesta #4 ya había decidido
