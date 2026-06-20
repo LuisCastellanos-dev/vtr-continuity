@@ -1,17 +1,32 @@
 # VTR Continuity — Estado del Proyecto v0.5.0
 
-> **Estado:** 8 de 10 propuestas de la fase criptográfica generadas:
-> `docs/VTR-CRYPTO-001.md`, `docs/VTR-PKI-001.md`, `crypto_layer/errors.py`,
-> `crypto_layer/__init__.py`, `crypto_layer/argon2_derive.py`,
-> `crypto_layer/hkdf_expand.py`, `crypto_layer/ed25519_sign.py`,
-> `config/rf_config.yaml` + `crypto_layer/rf_config_loader.py`. La #8 se
-> generó como dos archivos (no uno) tras detectar que el criterio de
-> aceptación exigía un loader con validación de tipos/rangos, manteniendo
-> intacta la decisión previa de que `CryptoConfig` no parsea YAML
-> directamente. Cadena completa validada de extremo a extremo: el YAML
-> real se carga, valida, y funciona con todas las operaciones
-> criptográficas ya generadas. Siguiente entregable: propuesta #9
-> (`tests/test_crypto_layer.py`).
+> **Estado en GitHub (rama `main`):** 8 de 10 propuestas de la fase
+> criptográfica generadas, validadas con tests reales, y sincronizadas en
+> el repositorio. Último commit: limpieza de 2 archivos duplicados que se
+> habían subido por error a la raíz del repo (`VTR-CRYPTO-001.md` y un
+> `.tar.gz` de sincronización local que nunca debió versionarse — ahora
+> bloqueado por `.gitignore`).
+
+## 0. Avance verificable — propuestas vs. archivos en el repo
+
+| # | Propuesta | Ruta en el repo | Validación aplicada |
+|---|---|---|---|
+| 1 | Reglas cripto consolidadas | `docs/VTR-CRYPTO-001.md` | 4 reglas, librerías justificadas por CVE |
+| 2 | Esquema PKI dos niveles | `docs/VTR-PKI-001.md` | Custodia SSS 3-de-5, ancla NIST/ISO |
+| 3 | Jerarquía de excepciones | `crypto_layer/errors.py` | 21 excepciones, 5 categorías, probado contra código de ejemplo de #1 y #2 |
+| 4 | API pública | `crypto_layer/__init__.py` | 12 tests reales — capability separation confirmada |
+| 5 | Derivación Argon2id | `crypto_layer/argon2_derive.py` | `lanes` corregido 4→1 tras medición real; tiempo <250ms pendiente de validar en RPi 4 |
+| 6 | Expansión HKDF | `crypto_layer/hkdf_expand.py` | 2 vectores oficiales RFC 5869, coincidencia exacta |
+| 7 | Firma Ed25519 | `crypto_layer/ed25519_sign.py` | 2 vectores oficiales RFC 8032, rechazo de bundle modificado confirmado |
+| 8 | Config runtime + loader | `config/rf_config.yaml` + `crypto_layer/rf_config_loader.py` | 7 tests adversariales, integración end-to-end con #4-#7 |
+| 9 | Suite de tests formal | `tests/test_crypto_layer.py` | **Pendiente** |
+| 10 | Definition of Done | `docs/DOD-v0.5.0.md` | **Pendiente** |
+
+**Progreso: 8/10 (80%).** Cada propuesta nueva se validó contra las ya
+generadas antes de darse por cerrada — no son archivos aislados, forman
+una cadena verificada (config → loader → CryptoConfig → CryptoLayer →
+derivación/firma reales), con ejecución real en cada paso, no solo
+revisión visual del código.
 
 ---
 
@@ -159,29 +174,20 @@ ISO/IEC 27037 (cadena de custodia de evidencia digital).
 
 ---
 
-## 7. Las 10 propuestas de la fase criptográfica
+## 7. Orden de generación de las propuestas — criterio aplicado
 
-| # | Entregable | Cubre | Estado |
-|---|---|---|---|
-| 1 | `docs/VTR-CRYPTO-001.md` | Reglas cripto consolidadas | ✅ Generado |
-| 2 | `docs/VTR-PKI-001.md` | Esquema PKI + custodia SSS | ✅ Generado |
-| 3 | `crypto_layer/errors.py` | Jerarquía de excepciones | ✅ Generado |
-| 4 | `crypto_layer/__init__.py` | API pública (CryptoLayer + CryptoConfig) | ✅ Generado |
-| 5 | `crypto_layer/argon2_derive.py` | Derivación con profile + async | ✅ Generado (tiempo pendiente de validar en RPi 4) |
-| 6 | `crypto_layer/hkdf_expand.py` | Expansión de subclaves (RFC 5869) | ✅ Generado, validado contra vectores oficiales |
-| 7 | `crypto_layer/ed25519_sign.py` | Firma/verificación de `.vtrc` | ✅ Generado, validado contra vectores oficiales RFC 8032 |
-| 8 | `config/rf_config.yaml` | Sección `crypto:` + RF + storage + DTN | ✅ Generado + loader separado |
-| 6 | `crypto_layer/hkdf_expand.py` | Expansión de subclaves | Pendiente |
-| 7 | `crypto_layer/ed25519_sign.py` | Firma/verificación de `.vtrc` | Pendiente |
-| 8 | `config/rf_config.yaml` | Sección `crypto:` parametrizada | Pendiente |
-| 9 | `tests/test_crypto_layer.py` | Tests felices + ≥15 adversariales | Pendiente |
-| 10 | `docs/DOD-v0.5.0.md` | Definition of Done actualizado | Pendiente |
+> El detalle completo de las 10 propuestas y su estado vive en la
+> **sección 0** de este documento, sincronizada con lo que realmente
+> existe en el repositorio. Esta sección documenta solo el *criterio* de
+> orden, no repite la tabla.
 
-El orden de generación sigue un criterio explícito: se prioriza lo que pueda
-refinar o modificar cualquier fase previa y reduzca el riesgo del conjunto —
-por eso las reglas (#1) y el esquema PKI (#2) preceden a cualquier código, y
-la jerarquía de excepciones (#3) precede a la API pública (#4) que la
-consume.
+El orden de generación sigue un criterio explícito: se prioriza lo que
+pueda refinar o modificar cualquier fase previa y reduzca el riesgo del
+conjunto — por eso las reglas (#1) y el esquema PKI (#2) preceden a
+cualquier código, y la jerarquía de excepciones (#3) precede a la API
+pública (#4) que la consume. Cada propuesta posterior se validó contra
+las anteriores antes de cerrarse — no se generó código aislado sin probar
+su integración con lo ya aprobado.
 
 ---
 
@@ -207,6 +213,15 @@ consume.
 # Desde la raíz del repo vtr-continuity
 git pull
 mkdir -p ~/vtr_handoff_$(date +%Y%m%d)
-cp -r docs/ specs/ crypto_layer/ HANDOFF.md README.md ~/vtr_handoff_$(date +%Y%m%d)/
+cp -r docs/ specs/ crypto_layer/ config/ HANDOFF.md README.md ~/vtr_handoff_$(date +%Y%m%d)/
 cd ~ && tar czf vtr_handoff_$(date +%Y%m%d).tar.gz vtr_handoff_$(date +%Y%m%d)/
 ```
+
+> **Nota operativa:** al copiar archivos individuales descargados hacia el
+> repo, verificar siempre la ruta de destino completa (`docs/archivo.md`,
+> no solo `archivo.md`) antes de `cp`. Un archivo copiado a la raíz del
+> repo por error queda fácilmente sin detectar en `git status` si se hace
+> `git add .` sin revisar la lista de archivos nuevos primero. El
+> `.tar.gz` de empaquetado nunca debe copiarse hacia el repo — está
+> bloqueado explícitamente en `.gitignore` (`*.tar.gz`) precisamente para
+> evitar que quede versionado por accidente.
