@@ -22,14 +22,14 @@
 |---|---|---|---|
 | 1 | Reglas cripto consolidadas | `docs/VTR-CRYPTO-001.md` | 4 reglas, librerías justificadas por CVE |
 | 2 | Esquema PKI dos niveles | `docs/VTR-PKI-001.md` | Custodia SSS 3-de-5, ancla NIST/ISO |
-| 3 | Jerarquía de excepciones | `crypto_layer/errors.py` | 21 excepciones, 5 categorías, probado contra código de ejemplo de #1 y #2 |
+| 3 | Jerarquía de excepciones | `crypto_layer/errors.py` | 21 excepciones, 5 categorías, probado contra código de ejemplo de #1 y #2. **Incidente post-cierre corregido** — ver §10. |
 | 4 | API pública | `crypto_layer/__init__.py` | 12 tests reales — capability separation confirmada |
 | 5 | Derivación Argon2id | `crypto_layer/argon2_derive.py` | `lanes` corregido 4→1 tras medición real; tiempo <250ms pendiente de validar en RPi 4 |
 | 6 | Expansión HKDF | `crypto_layer/hkdf_expand.py` | 2 vectores oficiales RFC 5869, coincidencia exacta |
 | 7 | Firma Ed25519 | `crypto_layer/ed25519_sign.py` | 2 vectores oficiales RFC 8032, rechazo de bundle modificado confirmado |
 | 8 | Config runtime + loader | `config/rf_config.yaml` + `crypto_layer/rf_config_loader.py` | 7 tests adversariales, integración end-to-end con #4-#7 |
 | 9 | Suite de tests formal | `tests/test_crypto_layer.py` | 70 tests (68 pasan, 2 skip documentado), 95% coverage real en `crypto_layer/` |
-| 10 | Definition of Done | `docs/DOD-v0.5.0.md` | 7 bloques completados, 4 parciales, 6 pendientes — ver §0 del documento |
+| 10 | Definition of Done | `docs/DOD-v0.5.0.md` | 11 bloques completados, 2 parciales, 4 pendientes — ver §1 del documento |
 
 **Progreso: 10/10 (100%) de la fase criptográfica.** Cada propuesta nueva se
 validó contra las ya generadas antes de darse por cerrada — no son archivos
@@ -48,6 +48,8 @@ solo revisión visual del código.
 | Ítem del checklist | Estado | Evidencia |
 |---|---|---|
 | Decisión arquitectónica Q-01/Q-02/Q-03 documentada | ✅ COMPLETADO | `docs/VTR-ARCH-DECISIONS-001.md` — heartbeat pasivo vía `NonceCounter` (Q-01), counter dentro del bundle `.vtrc` en vez de RTC (Q-02), config de campo firmada por PKI existente (Q-03). Ninguna introduce primitiva criptográfica nueva — las tres reusan `NonceCounter`, PKI de dos niveles, y `ed25519_sign.py` ya validados. |
+| Formato de bundle `.vtrc` (canonicalización + firma) | ✅ COMPLETADO | `crypto_layer/vtrc_bundle.py` — implementa la decisión de Q-02 (`(node_id, counter)` en el header). 59 tests, 96% coverage real. |
+| `storage_guardian.py` (purga FIFO, umbrales 80%/95%) | ✅ COMPLETADO | `core/storage_guardian.py` — monitoreo por base SQLite individual, bases `COUNTER` protegidas de purga automática. 41 tests, 98% coverage real. |
 
 
 
@@ -85,7 +87,10 @@ vtr-continuity/
 │   ├── argon2_derive.py               # ✅ Profiles embedded/desktop/hardened, lanes=1
 │   ├── hkdf_expand.py                 # ✅ RFC 5869 HKDF-Expand, validado con vectores oficiales
 │   ├── ed25519_sign.py                # ✅ RFC 8032 Ed25519, validado con vectores oficiales
-│   └── rf_config_loader.py            # ✅ Loader que valida rf_config.yaml -> CryptoConfig
+│   ├── rf_config_loader.py            # ✅ Loader que valida rf_config.yaml -> CryptoConfig
+│   └── vtrc_bundle.py                 # ✅ Formato .vtrc — implementa Q-02 (counter en header)
+├── core/
+│   └── storage_guardian.py            # ✅ Purga FIFO por base SQLite, protege bases COUNTER
 ├── config/
 │   └── rf_config.yaml                 # ✅ Sección crypto: + rf: + storage: + dtn:
 └── specs/
@@ -248,3 +253,31 @@ cd ~ && tar czf vtr_handoff_$(date +%Y%m%d).tar.gz vtr_handoff_$(date +%Y%m%d)/
 > `.tar.gz` de empaquetado nunca debe copiarse hacia el repo — está
 > bloqueado explícitamente en `.gitignore` (`*.tar.gz`) precisamente para
 > evitar que quede versionado por accidente.
+
+---
+
+## 10. Incidente post-cierre — `errors.py` ausente de GitHub (corregido)
+
+La propuesta #3 (`crypto_layer/errors.py`) estuvo marcada ✅ completada
+desde el cierre de la fase cripto, pero el archivo **nunca llegó a
+GitHub** — quedó solo en disco local, sin pasar nunca por `git add`. El
+repositorio remoto tenía `crypto_layer/__init__.py` y
+`crypto_layer/ed25519_sign.py` importando de un módulo que no existía en
+ningún commit; un clone limpio confirmó `ModuleNotFoundError` al intentar
+`import crypto_layer`.
+
+Se encontró al intentar reusar las excepciones reales para el módulo de
+bundle `.vtrc` (siguiente ítem del checklist post-#10) — no por una
+auditoría dedicada. Se localizó en disco local (dos copias idénticas
+confirmadas por `diff`, 21 clases verificadas), se corrigió en un commit
+dedicado, y se reconfirmó la suite completa (68 passed / 2 skipped,
+idéntico a lo ya reportado en la propuesta #9).
+
+Detalle completo del incidente, causa raíz, y la práctica de verificación
+adoptada a partir de este punto (clone limpio + import real antes de
+declarar cualquier módulo completado) en `docs/DOD-v0.5.0.md` §6.
+
+Esta nota operativa de la sección anterior (§9) sobre archivos copiados
+por error a la ruta incorrecta ya advertía exactamente este tipo de
+riesgo — este incidente es la confirmación real de que el riesgo no era
+hipotético.

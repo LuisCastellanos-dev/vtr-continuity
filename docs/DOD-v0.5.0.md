@@ -40,16 +40,16 @@ ambas cosas explícitamente para no confundir "fase cripto cerrada" con
 | Tests | ≥56 tests Jest pasando | ⬜ PENDIENTE | Solo existen 41 tests Jest, y corresponden al módulo browser-native de **v0.1.0** (`session_guard.js`), no al stack RF/cripto de v0.5.0. No hay tests Jest nuevos para esta fase. |
 | PKI | CA root + intermediate operativas | 🟡 PARCIAL | Esquema documentado y aprobado en `docs/VTR-PKI-001.md` (decisión 4C). **No hay evidencia de que la CA root y la intermediate existan como artefactos reales** (claves generadas, certificados emitidos) — el documento especifica el procedimiento, no certifica su ejecución. |
 | PKI | `docs/VTR-PKI-001.md` publicado | ✅ COMPLETADO | Commiteado, incluye esquema de dos niveles + custodia SSS 3-de-5 con 4 capas de mitigación |
-| Bundle | `.vtrc` firmado obligatorio | 🟡 PARCIAL | `ed25519_sign.py` provee la primitiva de firma/verificación, validada byte a byte contra RFC 8032. La canonicalización real del bundle (`header‖payload‖metadata`, firma puesta a cero antes de firmar) está **definida en la spec** pero vive en un módulo de formato de bundle separado, fuera de las 10 propuestas — no implementado todavía. |
-| Bundle | Verificación de firma `.vtrc` en lectura (sneakernet inbound) | ⬜ PENDIENTE | Depende del módulo de formato de bundle anterior; sin ese módulo no hay punto de entrada real que verificar. |
-| Storage | `storage_guardian.py` (purga FIFO, umbrales 80%/95%) | ⬜ PENDIENTE | No existe en el repositorio. Parámetros ya están definidos en `rf_config.yaml` (`storage.guardian.warn_threshold_percent`, `purge_threshold_percent`, `purge_policy: fifo`), pero el módulo que los consume no se ha escrito. |
+| Bundle | `.vtrc` firmado obligatorio | ✅ COMPLETADO | `crypto_layer/vtrc_bundle.py` — `build_bundle()`/`parse_bundle()`/`verify_bundle()`, canonicalización `header‖payload‖metadata` con firma puesta a cero antes de firmar, exactamente como especificaba `specs/PROPOSALS-10.md` §7. 59 tests, 96% coverage real. Implementa Q-02: el par `(node_id, counter)` viaja dentro del header, nunca se infiere del RTC. |
+| Bundle | Verificación de firma `.vtrc` en lectura (sneakernet inbound) | ✅ COMPLETADO | `verify_bundle()` en el mismo módulo — retorna `False` (no excepción) ante firma inválida o bundle corrupto, mismo contrato que `ed25519_sign.verify()`. `CounterVerificationStore` añade la verificación de replay sin sesión (tabla de "último counter visto", nunca el RTC). |
+| Storage | `storage_guardian.py` (purga FIFO, umbrales 80%/95%) | ✅ COMPLETADO | `core/storage_guardian.py` — monitoreo por base SQLite individual (no disco total), purga FIFO solo en bases `TRANSIENT` (ej. `fragments.db`), bases `COUNTER` (`nonce_counter.db`, `vtrc_counter_seen.db`) protegidas explícitamente contra purga automática. 41 tests, 98% coverage real, incluye protección contra inyección SQL en nombres de tabla/columna interpolados. |
 | Provisioning | Bench air-gapped funcional | ⬜ PENDIENTE | Decisión 3A aprobada (provisioning en bench, sin red). Es una decisión de diseño, no un bench físico operativo verificado. |
 | Provisioning | `device_registry.vtrdb` con append-only log + cifrado LUKS | ⬜ PENDIENTE | No existe `vtr-provision.py` ni `device_registry.vtrdb` en el repositorio. |
 | Preguntas | Q-01/Q-02/Q-03 con decisión documentada | ✅ COMPLETADO | `docs/VTR-ARCH-DECISIONS-001.md` — decisión documentada para las tres; ninguna implementada todavía como código |
 | Documentación | STRIDE en `docs/VTR-THREAT-001.md` | ⬜ PENDIENTE | No existe en el repositorio. Omisión O#7 sigue sin cerrar. |
 | Documentación | Mapeo a IEC 62443 / NERC CIP | 🟡 PARCIAL | Referencias puntuales ya citadas inline en `VTR-CRYPTO-001.md` y `VTR-PKI-001.md` (SR 1.1, 1.5, 1.8, 2.1, CR 1.5). Falta el documento consolidado de mapeo cláusula-por-cláusula (E9/E10/E11). |
 
-**Resumen cuantitativo:** 8 ✅ completados / 4 🟡 parciales / 5 ⬜ pendientes,
+**Resumen cuantitativo:** 11 ✅ completados / 2 🟡 parciales / 4 ⬜ pendientes,
 de 17 bloques totales del DoD.
 
 ---
@@ -60,7 +60,7 @@ de 17 bloques totales del DoD.
 |---|---|---|---|
 | 1 | Reglas cripto consolidadas | `docs/VTR-CRYPTO-001.md` | 4 reglas, librerías fijadas por revisión de CVE (PyNaCl ≥1.6.2 post CVE-2025-69277, pyca ≥45.0 post CVE-2026-26007) |
 | 2 | Esquema PKI dos niveles | `docs/VTR-PKI-001.md` | Custodia SSS 3-de-5 con 4 mitigaciones explícitas, anclado a NIST SP 800-57 / ISO 27037 |
-| 3 | Jerarquía de excepciones | `crypto_layer/errors.py` | 21 excepciones, 5 categorías (incluye `CustodyError`, añadida tras detectar referencia previa no resuelta en #2) |
+| 3 | Jerarquía de excepciones | `crypto_layer/errors.py` | 21 excepciones, 5 categorías (incluye `CustodyError`, añadida tras detectar referencia previa no resuelta en #2). **Incidente post-cierre, ver §6**: este archivo nunca llegó a `git push` a pesar de estar marcado completado — quedó solo en disco local, rompiendo `import crypto_layer` en GitHub hasta su corrección. |
 | 4 | API pública | `crypto_layer/__init__.py` | `CryptoConfig` + `CryptoLayer`; capability separation `device_key`/`operator_key` confirmada por test (Decisión 1B) |
 | 5 | Derivación Argon2id | `crypto_layer/argon2_derive.py` | `lanes` corregido de 4→1 tras medición real; presupuesto <250ms **pendiente de validar en RPi 4 real** (275ms medido en entorno de 1 núcleo) |
 | 6 | Expansión HKDF | `crypto_layer/hkdf_expand.py` | RFC 5869 Apéndice A, Test Cases 1 y 2 — coincidencia exacta byte a byte |
@@ -139,11 +139,13 @@ de campo — no para considerar cerrada la fase cripto, que ya lo está.
 - [ ] Validar presupuesto de tiempo de Argon2id (<250ms, profile `desktop`)
   en hardware RPi 4 real con 4 núcleos — pendiente desde propuesta #5,
   medido solo en entorno de 1 núcleo hasta ahora.
-- [ ] Diseñar e implementar el módulo de formato de bundle `.vtrc`
+- [x] ~~Diseñar e implementar el módulo de formato de bundle `.vtrc`
   (canonicalización `header‖payload‖metadata`, firma puesta a cero antes
-  de firmar) — `ed25519_sign.py` provee la primitiva, no el formato.
-- [ ] Implementar `storage_guardian.py` (purga FIFO, umbrales 80%/95%) —
-  parámetros ya definidos en `rf_config.yaml`, módulo no escrito.
+  de firmar) — `ed25519_sign.py` provee la primitiva, no el formato.~~
+  **COMPLETADO** — `crypto_layer/vtrc_bundle.py`, 59 tests, 96% coverage.
+- [x] ~~Implementar `storage_guardian.py` (purga FIFO, umbrales 80%/95%) —
+  parámetros ya definidos en `rf_config.yaml`, módulo no escrito.~~
+  **COMPLETADO** — `core/storage_guardian.py`, 41 tests, 98% coverage.
 - [ ] Ejecutar el setup real de CA root + intermediate (no solo el
   procedimiento documentado en `VTR-PKI-001.md`).
 - [ ] Resolver la distribución de los custodios 2–5 del esquema SSS 3-de-5
@@ -159,10 +161,13 @@ de campo — no para considerar cerrada la fase cripto, que ya lo está.
   - [ ] Implementar máquina de estados de liveness (`ALIVE` /
     `SUSPECTED_DOWN`) y campo `heartbeat_timeout_seconds` en
     `rf_config.yaml` (Q-01).
-  - [ ] Incluir campo `(node_id, counter)` en el header del formato de
+  - [x] ~~Incluir campo `(node_id, counter)` en el header del formato de
     bundle `.vtrc` y tabla de verificación de "último counter visto"
     (Q-02) — requisito de entrada directa para el siguiente punto de este
-    checklist.
+    checklist.~~ **COMPLETADO** — `crypto_layer/vtrc_bundle.py` (header
+    con `node_id`/`counter` fijos) + `CounterVerificationStore` (tabla de
+    verificación, estructuralmente paralela a `NonceCounter` pero en modo
+    lectura).
   - [ ] Implementar paso de verificación de firma Ed25519 (clave
     `intermediate`) en el punto de entrada de configuración de campo,
     antes de `rf_config_loader.py` (Q-03).
@@ -185,3 +190,49 @@ propuestas de la fase criptográfica.** Cerrar la fase cripto al 100% no
 equivale a tener v0.5.0 lista para campo — este checklist es precisamente
 la distancia entre ambos estados, y debe tratarse como el roadmap inmediato
 post-#10, no como trabajo ya completado.
+
+---
+
+## 6. Incidente post-cierre — `crypto_layer/errors.py` ausente de GitHub
+
+Durante el trabajo en el formato de bundle `.vtrc` (este checklist, punto
+ya cerrado), se detectó que `crypto_layer/errors.py` —la propuesta #3,
+marcada ✅ completada desde antes del cierre de la fase cripto— **nunca
+había sido subida a GitHub**. El repositorio remoto tenía
+`crypto_layer/__init__.py` y `crypto_layer/ed25519_sign.py` importando
+directamente de `crypto_layer.errors`, pero ese archivo no existía en
+ningún commit del historial (`git log --all -- "**/errors.py"` vacío).
+Resultado verificado en un clone limpio: `import crypto_layer` fallaba con
+`ModuleNotFoundError`.
+
+**Causa raíz:** el archivo existía y se había usado realmente — un
+residuo `crypto_layer/__pycache__/__init__.cpython-312.pyc` confirmó que
+el módulo se ejecutó localmente (es decir, los 68 passed / 2 skipped
+reportados en la propuesta #9 son ejecuciones reales, no inventadas) —
+pero el archivo fuente nunca pasó por `git add`. Se quedó en disco local
+sin que ningún `git status` posterior lo marcara como pendiente, porque
+nunca llegó a estar bajo control de versiones en primer lugar.
+
+**Cómo se encontró:** no por una auditoría dedicada, sino como
+consecuencia directa de intentar reusar `crypto_layer.errors` en el
+módulo nuevo de bundle `.vtrc` — al clonar el repo limpio para verificar
+contra qué excepciones reales debía construirse el módulo, el `import`
+falló de inmediato.
+
+**Corrección:** el archivo se localizó en disco local del usuario (dos
+copias idénticas confirmadas por `diff`, 21 clases verificadas), se copió
+a `crypto_layer/errors.py`, se confirmó `import crypto_layer` exitoso, se
+re-ejecutó `tests/test_crypto_layer.py` completo (68 passed / 2 skipped,
+idéntico a lo ya reportado) y se subió en un commit dedicado.
+
+**Por qué esto importa para la integridad de este DoD:** este incidente
+es la prueba de que el criterio de "todo ítem completado debe tener
+evidencia verificable" (declarado en el encabezado de este documento) no
+es un formalismo — fue precisamente la falta de una verificación de
+"clone limpio + import real" lo que permitió que un módulo roto
+permaneciera marcado como completado durante el resto de la fase
+criptográfica sin que nadie lo notara. La lección operativa, ya aplicada
+en los tres módulos posteriores (`vtrc_bundle.py`, `storage_guardian.py`,
+`VTR-ARCH-DECISIONS-001.md`): cada entrega ahora se valida contra un
+`git clone --depth 1` fresco, nunca contra el estado de un entorno de
+trabajo que pudo acumular archivos no commiteados.

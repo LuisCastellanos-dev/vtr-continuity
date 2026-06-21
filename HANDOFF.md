@@ -154,10 +154,13 @@ backlog:
 > reclasifica el Definition of Done original bloque por bloque
 > (✅ completado / 🟡 parcial / ⬜ pendiente) con evidencia real citada en
 > cada caso, y deja un checklist de 14 puntos pre-release que nunca
-> estuvieron dentro del alcance de estas 10 propuestas (provisioning
-> operativo real, `storage_guardian.py`, STRIDE, tests Jest del stack RF,
-> site survey RF, entre otros). El primero de esos 14 puntos — decisión
-> documentada para Q-01/Q-02/Q-03 — ya se cerró, ver siguiente sección.
+> estuvieron dentro del alcance de estas 10 propuestas. De esos 14 puntos,
+> tres ya están cerrados con código y tests reales: decisión documentada
+> para Q-01/Q-02/Q-03, formato de bundle `.vtrc`, y `storage_guardian.py`
+> — ver las secciones siguientes. Además, durante este trabajo se detectó
+> y corrigió un incidente real: la propuesta #3 (`crypto_layer/errors.py`)
+> nunca había llegado a GitHub a pesar de estar marcada completada — ver
+> §🚨 más abajo.
 
 ### 🧭 Q-01/Q-02/Q-03 — decisión documentada (`docs/VTR-ARCH-DECISIONS-001.md`)
 
@@ -193,6 +196,109 @@ Las tres decisiones comparten un criterio explícito: ninguna introduce
 una primitiva criptográfica o mecanismo de confianza nuevo — las tres
 reutilizan `NonceCounter`, la PKI de dos niveles, y `ed25519_sign.py` ya
 validados en las propuestas #1–#9.
+
+### 📦 Formato de bundle `.vtrc` (`crypto_layer/vtrc_bundle.py`)
+
+Segundo punto del checklist post-#10 cerrado. Implementa la
+canonicalización que la propuesta #7 dejó explícitamente fuera de
+alcance (`header‖payload‖metadata`, firma puesta a cero antes de firmar)
+y, directamente, la decisión de Q-02: el header incluye el par
+`(node_id, counter)` de 8+8 bytes, generado por el `NonceCounter` del
+emisor — nunca se infiere del RTC del receptor.
+
+- `build_bundle()` / `parse_bundle()` / `verify_bundle()` — mismo
+  contrato que `ed25519_sign.verify()`: `verify_bundle()` retorna `False`
+  ante firma inválida o bundle corrupto, nunca lanza excepción por una
+  firma simplemente incorrecta.
+- `CounterVerificationStore` — estructuralmente paralela a
+  `NonceCounter`, pero en modo verificación: mantiene "máximo counter
+  visto por `node_id`" en SQLite, persistente entre reinicios, nunca
+  contra reloj.
+- 59 tests (`tests/test_vtrc_bundle.py`), 96% coverage real medido.
+  Validado con round-trip real (no solo unitario): firma/verificación,
+  rechazo de bundle modificado, rechazo de llave pública equivocada,
+  persistencia del counter tras "reinicio" simulado (nueva instancia de
+  `CounterVerificationStore` sobre la misma DB).
+- Las 3 líneas sin cubrir del 96% son excepción genérica de la librería
+  subyacente — mismo criterio que en la propuesta #9: forzarlas
+  requeriría mockear, lo que se consideró relleno, no validación real.
+
+### 🗄️ `storage_guardian.py` — monitoreo y purga FIFO (D1 del roadmap)
+
+Tercer punto del checklist post-#10 cerrado. Origen: bloqueante S#2 de
+`VTR-SEC-001` ("alerta antes de saturar SQLite"), parámetros ya definidos
+en `rf_config.yaml` (`storage.guardian.warn_threshold_percent: 80`,
+`purge_threshold_percent: 95`, `purge_policy: fifo`) desde antes de que
+existiera el módulo que los consume.
+
+**Decisión de diseño central — monitoreo por base SQLite individual, no
+disco total.** Las bases del proyecto tienen roles distintos:
+`nonce_counter.db` y `vtrc_counter_seen.db` son contadores monotónicos
+(crecimiento acotado por tamaño de flota, **nunca purgables** sin romper
+la garantía anti-replay de Q-02); `fragments.db` (Capa 2, DTN) es tráfico
+en tránsito sin acotar, purgable FIFO sin riesgo. El guardian distingue
+ambos roles explícitamente (`StorageRole.COUNTER` vs.
+`StorageRole.TRANSIENT`) — una base `COUNTER` que excede el umbral nunca
+se purga automáticamente, registra error y exige intervención humana.
+
+**Dos bugs reales encontrados y corregidos durante el desarrollo, no
+solo en el diseño teórico:**
+1. La primera versión medía solo el archivo `.db` principal. Al probar
+   contra una `FragmentStore` real con 300 inserts, el archivo `-wal`
+   pesaba 4.1 MB contra 77 KB del `.db` — el guardian estaba
+   completamente ciego al WAL, que en SQLite puede pesar órdenes de
+   magnitud más que el archivo "principal" hasta el siguiente checkpoint.
+   Corregido: `_file_size()` suma `.db` + `-wal` + `-shm`.
+2. Un loop de "borra un lote, mide, repite" nunca terminaba, porque
+   `DELETE` en SQLite no reduce el tamaño del archivo sin `VACUUM` — el
+   loop vaciaba la tabla completa en vez de purgar solo lo necesario.
+   Corregido: se estima bytes-por-fila a partir del tamaño y conteo
+   actuales, se calcula cuántas filas hace falta eliminar en una sola
+   pasada, y se hace un único `VACUUM` al final (no uno por lote — costoso
+   en una SD de RPi/Heltec).
+
+**Protección contra inyección SQL:** los nombres de tabla/columna
+(`purge_table`, `purge_timestamp_column`) se interpolan en la query de
+purga porque SQLite no soporta `?` para identificadores — se valida con
+una whitelist regex (`^[A-Za-z_][A-Za-z0-9_]*$`) en construcción de
+`WatchedDatabase`, antes de que el valor llegue a cualquier string SQL.
+Tests explícitos prueban `"fragments; DROP TABLE fragments;--"` y
+similares, todos rechazados. Las tres bases SQLite ya existentes en el
+proyecto (`NonceCounter`, `FragmentStore`,
+`CounterVerificationStore`) se revisaron como parte de este trabajo y
+confirmaron parametrización correcta — ninguna concatena datos externos
+en SQL.
+
+41 tests (`tests/test_storage_guardian.py`), 98% coverage real medido,
+contra instancias reales de `FragmentStore` y `NonceCounter` (no mocks)
+— un mock de `sqlite3` no habría expuesto ninguno de los dos bugs
+anteriores.
+
+### 🚨 Incidente post-cierre — `crypto_layer/errors.py` ausente de GitHub
+
+Detectado al intentar reusar las excepciones reales para
+`vtrc_bundle.py`: un clone limpio del repositorio mostró
+`ModuleNotFoundError: No module named 'crypto_layer.errors'` al ejecutar
+`import crypto_layer`. La propuesta #3 estaba marcada ✅ completada desde
+el cierre de la fase cripto, pero el archivo nunca había pasado por
+`git add` — quedó solo en disco local (confirmado por un residuo
+`__pycache__/__init__.cpython-312.pyc`, evidencia de que sí se ejecutó
+localmente, así que los 68 passed / 2 skipped de la propuesta #9 son
+reales). `git log --all -- "**/errors.py"` confirmó que el archivo nunca
+estuvo en ningún commit.
+
+Corrección: archivo localizado en disco local del usuario (dos copias
+idénticas confirmadas por `diff`, 21 clases verificadas contra el
+docstring documentado), copiado a `crypto_layer/errors.py`, `import
+crypto_layer` reconfirmado exitoso, suite completa re-ejecutada (68
+passed / 2 skipped, idéntico a lo reportado), subido en commit dedicado.
+
+**Práctica adoptada a partir de este incidente:** cada entrega posterior
+(`vtrc_bundle.py`, `storage_guardian.py`) se validó contra un
+`git clone --depth 1` fresco antes de declararse completada, no contra
+el estado acumulado de un entorno de trabajo local que puede tener
+archivos sin commitear sin que ningún `git status` posterior lo detecte
+retroactivamente. Detalle completo en `docs/DOD-v0.5.0.md` §6.
 
 > **Nota sobre la propuesta #8:** la spec original exige que "el loader
 > valide tipos y rangos", pero la propuesta #4 ya había decidido
