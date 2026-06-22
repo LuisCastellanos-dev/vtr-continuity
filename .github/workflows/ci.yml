@@ -21,14 +21,57 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Instalar dependencias Python
+      - name: Instalar dependencias Python — stack OT/RPi
         run: |
           pip install --upgrade pip
-          pip install fastapi uvicorn httpx pydantic pytest pytest-asyncio cryptography pyjwt asyncua lz4 PyNaCl
+          pip install fastapi uvicorn httpx pydantic pyjwt asyncua
 
-      - name: Ejecutar tests Python
+      - name: Instalar dependencias Python — fase criptográfica
+        # Fuente única de verdad: requirements-crypto.txt. No hardcodear
+        # aquí — ver incidente documentado en docs/DOD-v0.5.0.md §6 sobre
+        # por qué una dependencia inline sin archivo de respaldo es
+        # exactamente el tipo de brecha silenciosa que este proyecto ya
+        # sufrió una vez (crypto_layer/errors.py nunca llegó a GitHub
+        # sin que ningún chequeo automático lo detectara).
+        run: pip install -r requirements-crypto.txt
+
+      - name: Ejecutar tests Python — stack OT/RPi/server
         run: |
           python3 -m pytest server/tests/ core/tests/ rpi/tests/ -v --tb=short
+
+      - name: Ejecutar tests Python — fase criptográfica (crypto_layer + vtrc_bundle + storage_guardian)
+        # tests/ es la carpeta de la fase criptográfica completa: 170
+        # tests entre test_crypto_layer.py (propuestas #1-#9),
+        # test_vtrc_bundle.py (formato de bundle .vtrc, implementa Q-02),
+        # y test_storage_guardian.py (purga FIFO, protección de bases
+        # COUNTER). Antes de este fix, este job NUNCA ejecutaba ninguno
+        # de estos tests en CI — corrían solo manualmente en la máquina
+        # de desarrollo.
+        run: |
+          python3 -m pytest tests/ -v --tb=short \
+            --cov=crypto_layer --cov=core.storage_guardian \
+            --cov-report=term-missing
+
+      - name: Verificar coverage mínimo (90% agregado)
+        # Mismo umbral que el criterio de aceptación ya aplicado en cada
+        # propuesta de la fase criptográfica (docs/DOD-v0.5.0.md) — si
+        # una entrega futura baja de 90%, el CI falla en vez de
+        # descubrirse en una revisión manual posterior.
+        #
+        # NOTA HONESTA: este gate mide el AGREGADO de crypto_layer/ +
+        # core/storage_guardian.py, no cada archivo individualmente.
+        # Al momento de este fix, argon2_derive.py (85%) y
+        # rf_config_loader.py (89%) están individualmente por debajo del
+        # 90% documentado como criterio de aceptación de sus propuestas
+        # originales — el agregado de 96% los compensa. Esto no es nuevo
+        # introducido por este fix: simplemente nadie lo había medido en
+        # conjunto hasta ahora, porque el CI nunca ejecutaba estos tests.
+        # Subir esos dos módulos específicos a 90%+ individual queda como
+        # mejora futura, no como bloqueante de este fix de CI.
+        run: |
+          python3 -m pytest tests/ \
+            --cov=crypto_layer --cov=core.storage_guardian \
+            --cov-fail-under=90 -q
 
   jest:
     name: JavaScript Tests (Jest)

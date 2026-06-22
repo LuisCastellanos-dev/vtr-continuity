@@ -255,3 +255,55 @@ en los tres módulos posteriores (`vtrc_bundle.py`, `storage_guardian.py`,
 `VTR-ARCH-DECISIONS-001.md`): cada entrega ahora se valida contra un
 `git clone --depth 1` fresco, nunca contra el estado de un entorno de
 trabajo que pudo acumular archivos no commiteados.
+
+---
+
+## 7. Reparación del CI — `tests/` nunca se ejecutaba en GitHub Actions
+
+Al auditar el repositorio buscando trabajo pendiente, se encontró que
+`.github/workflows/ci.yml` ejecutaba `pytest server/tests/ core/tests/
+rpi/tests/` — **la carpeta `tests/` en la raíz, donde viven los 170
+tests de toda la fase criptográfica (`test_crypto_layer.py`,
+`test_vtrc_bundle.py`, `test_storage_guardian.py`), nunca estuvo incluida
+en ese comando.** Desde que el CI existe, nunca ejecutó automáticamente
+ni un solo test de las 10 propuestas cripto, del formato de bundle, ni
+del storage guardian — solo corrían manualmente en la máquina de
+desarrollo.
+
+**Verificado, no solo corregido a ciegas:** se simuló el CI exacto en un
+venv aislado (`python3 -m venv`, sin reusar paquetes ya instalados en el
+entorno de desarrollo) con la línea de `pip install` original del
+workflow. Resultado: **6 de 170 tests fallarían** con
+`ModuleNotFoundError: No module named 'yaml'` —
+`crypto_layer/rf_config_loader.py` hace `import yaml` en tiempo de
+ejecución (no a nivel de módulo), y el `pip install` inline del CI nunca
+incluía `PyYAML`. Confirmado con traceback real, reproducible.
+
+**Corrección aplicada:**
+
+1. **`requirements-crypto.txt`** (nuevo, raíz del repo) — fuente única de
+   verdad para las dependencias de `crypto_layer/` +
+   `core/storage_guardian.py`: `PyNaCl>=1.6.2`, `cryptography>=45.0`,
+   `PyYAML>=6.0`, `lz4>=4.3`, `pytest>=8.3`, `pytest-asyncio>=0.24`,
+   `pytest-cov>=5.0`. Confirmadas por inspección real de imports (grep
+   línea por línea en todo lo que `tests/` ejercita), no por suposición.
+2. **`.github/workflows/ci.yml`** actualizado — instala desde
+   `requirements-crypto.txt` en vez de hardcodear inline, agrega el paso
+   que faltaba (`pytest tests/ --cov=crypto_layer
+   --cov=core.storage_guardian`), y agrega un gate de coverage mínimo
+   (`--cov-fail-under=90`) para que una futura caída de coverage falle
+   el CI en vez de descubrirse en revisión manual.
+3. **Validado de extremo a extremo en venv aislado** antes de subir:
+   481 passed (stack OT/RPi original, sin regresión) + 168 passed/2
+   skipped (fase cripto, antes invisible al CI) + gate de coverage
+   pasando con 96.24% agregado.
+
+**Nota honesta sobre el gate de coverage:** mide el agregado de
+`crypto_layer/` + `core/storage_guardian.py`, no cada archivo
+individualmente. `argon2_derive.py` (85%) y `rf_config_loader.py` (89%)
+están hoy por debajo del 90% documentado como criterio de aceptación de
+sus propuestas originales — el agregado de 96% los compensa. Esto no es
+una regresión introducida por este fix: nadie lo había medido en
+conjunto hasta ahora, porque el CI nunca corría estos tests. Subir esos
+dos módulos específicos a 90%+ individual queda registrado como mejora
+futura, no como bloqueante de esta reparación.

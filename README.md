@@ -95,6 +95,7 @@ vtr-continuity/
 │   └── storage_guardian.py            # ✅ Purga FIFO por base SQLite, protege bases COUNTER
 ├── config/
 │   └── rf_config.yaml                 # ✅ Sección crypto: + rf: + storage: + dtn:
+├── requirements-crypto.txt            # ✅ Dependencias crypto_layer/ — fuente única para el CI
 └── specs/
     └── PROPOSALS-10.md                # Especificación de las 10 propuestas
 ```
@@ -283,3 +284,23 @@ Esta nota operativa de la sección anterior (§9) sobre archivos copiados
 por error a la ruta incorrecta ya advertía exactamente este tipo de
 riesgo — este incidente es la confirmación real de que el riesgo no era
 hipotético.
+
+---
+
+## 11. Reparación del CI — `tests/` nunca se ejecutaba en GitHub Actions
+
+`.github/workflows/ci.yml` ejecutaba `pytest server/tests/ core/tests/
+rpi/tests/` — la carpeta `tests/` en la raíz, con los 170 tests de toda
+la fase criptográfica, nunca estuvo incluida. Verificado en venv aislado:
+el CI tampoco habría podido correrlos sin fallar, porque
+`PyYAML` nunca estaba en el `pip install` inline y
+`rf_config_loader.py` lo necesita.
+
+Corregido: nuevo `requirements-crypto.txt` (fuente única de las
+dependencias de `crypto_layer/` + `core/storage_guardian.py`) y
+`.github/workflows/ci.yml` actualizado con el paso faltante + gate de
+coverage mínimo 90%. Validado de extremo a extremo en venv aislado antes
+de subir: 481 + 168 tests pasando, 96.24% coverage agregado.
+
+Detalle completo, incluyendo la nota honesta sobre coverage por módulo
+individual vs. agregado, en `docs/DOD-v0.5.0.md` §7.

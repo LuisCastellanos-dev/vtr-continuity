@@ -1,0 +1,24 @@
+# vtr-continuity — fase criptográfica (crypto_layer/ + core/storage_guardian.py)
+# Python >= 3.11
+#
+# Confirmado por inspección real de imports (grep línea por línea, no
+# supuesto) en crypto_layer/*.py, core/storage_guardian.py,
+# core/crypto_transport.py, core/dtn_fragmenter.py, y los tests bajo
+# tests/test_crypto_layer.py, tests/test_vtrc_bundle.py,
+# tests/test_storage_guardian.py — ver incidente documentado en
+# docs/DOD-v0.5.0.md §6 sobre por qué esta verificación se hace contra
+# código real, no de memoria.
+#
+# Este archivo es la fuente única de verdad para estas dependencias.
+# El workflow de CI (.github/workflows/ci.yml) las instala desde aquí —
+# no las hardcodea inline — precisamente para que una dependencia nueva
+# usada en código no pueda quedar fuera del CI sin que alguien lo note
+# en este archivo primero.
+
+PyNaCl>=1.6.2          # crypto_layer/ed25519_sign.py, vtrc_bundle.py — Ed25519, XChaCha20-Poly1305
+cryptography>=45.0     # crypto_layer/argon2_derive.py — KDF Argon2id (pyca)
+PyYAML>=6.0            # crypto_layer/rf_config_loader.py — parseo de rf_config.yaml
+lz4>=4.3               # core/crypto_transport.py — compresión de EncryptedBundle
+pytest>=8.3
+pytest-asyncio>=0.24   # crypto_layer/argon2_derive.py derive_async, tests async
+pytest-cov>=5.0        # medición de coverage real — ver criterio de aceptación en docs/DOD-v0.5.0.md
