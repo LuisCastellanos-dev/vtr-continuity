@@ -173,9 +173,14 @@ de campo — no para considerar cerrada la fase cripto, que ya lo está.
     antes de `rf_config_loader.py` (Q-03).
 - [ ] Generar `docs/VTR-THREAT-001.md` con modelo STRIDE completo.
 - [ ] Sesión de fuzzing UART Heltec + LoRa simulado (`VTR-FUZ-001`).
-- [ ] Site survey RF en ≥2 ubicaciones industriales/portuarias reales
-  (RSSI/SNR/PER, link budget) — sin esto, el alcance real de LoRa en el
-  corredor Tampico-Altamira-Madero sigue siendo teórico.
+- [ ] **[PRIORIDAD MÁXIMA]** Site survey RF en ≥2 ubicaciones
+  industriales/portuarias reales (RSSI/SNR/PER, link budget) — sin esto,
+  el alcance real de LoRa en el corredor Tampico-Altamira-Madero sigue
+  siendo teórico (580 km en espacio libre vs. realidad industrial
+  desconocida). **Protocolo de medición completo y listo para ejecución
+  en `docs/VTR-SURVEY-001.md`** — hardware (2× Heltec) ya disponible,
+  ejecución planeada para la siguiente sesión activa tras el break del
+  20-jun-2026.
 - [ ] Tests E2E browser ↔ backend para verificación de `.vtrc` en
   `session_guard.js` (omisión O#8).
 - [ ] Mapeo consolidado decisión-por-decisión a cláusulas IEC 62443 /
@@ -190,6 +195,20 @@ propuestas de la fase criptográfica.** Cerrar la fase cripto al 100% no
 equivale a tener v0.5.0 lista para campo — este checklist es precisamente
 la distancia entre ambos estados, y debe tratarse como el roadmap inmediato
 post-#10, no como trabajo ya completado.
+
+---
+
+## 5.1 Punto de continuidad — retomar aquí
+
+> **Sábado 20-jun-2026, noche.** Sesión en pausa por break del proyecto
+> (domingo 21-jun-2026 sin actividad). Próxima sesión activa: lunes.
+>
+> **Prioridad máxima al retomar:** ejecutar `docs/VTR-SURVEY-001.md` —
+> protocolo de site survey RF, completo y listo, sin pasos pendientes de
+> documentación. Hardware confirmado disponible (2× Heltec WiFi LoRa 32
+> V3). Ningún otro punto del checklist depende de trabajo de esta sesión
+> de pausa — el survey es autocontenido y ejecutable directamente al
+> retomar.
 
 ---
 

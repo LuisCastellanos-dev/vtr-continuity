@@ -50,6 +50,7 @@ solo revisión visual del código.
 | Decisión arquitectónica Q-01/Q-02/Q-03 documentada | ✅ COMPLETADO | `docs/VTR-ARCH-DECISIONS-001.md` — heartbeat pasivo vía `NonceCounter` (Q-01), counter dentro del bundle `.vtrc` en vez de RTC (Q-02), config de campo firmada por PKI existente (Q-03). Ninguna introduce primitiva criptográfica nueva — las tres reusan `NonceCounter`, PKI de dos niveles, y `ed25519_sign.py` ya validados. |
 | Formato de bundle `.vtrc` (canonicalización + firma) | ✅ COMPLETADO | `crypto_layer/vtrc_bundle.py` — implementa la decisión de Q-02 (`(node_id, counter)` en el header). 59 tests, 96% coverage real. |
 | `storage_guardian.py` (purga FIFO, umbrales 80%/95%) | ✅ COMPLETADO | `core/storage_guardian.py` — monitoreo por base SQLite individual, bases `COUNTER` protegidas de purga automática. 41 tests, 98% coverage real. |
+| **Site survey RF (≥2 ubicaciones reales)** | 🟡 **PROTOCOLO LISTO — PRIORIDAD MÁXIMA** | `docs/VTR-SURVEY-001.md` — protocolo de medición completo (RSSI/SNR/PER con los parámetros reales de `rf_config.yaml`: 915MHz/14dBm/SF9/BW125). Hardware (2× Heltec) ya disponible. Ejecución planeada para la siguiente sesión activa. |
 
 
 
@@ -80,7 +81,8 @@ vtr-continuity/
 │   ├── VTR-CRYPTO-001.md              # ✅ 4 reglas cripto + librerías verificadas
 │   ├── VTR-PKI-001.md                 # ✅ PKI dos niveles + custodia SSS 3-de-5
 │   ├── DOD-v0.5.0.md                  # ✅ Definition of Done — propuesta #10
-│   └── VTR-ARCH-DECISIONS-001.md      # ✅ Q-01/Q-02/Q-03 — decisiones documentadas
+│   ├── VTR-ARCH-DECISIONS-001.md      # ✅ Q-01/Q-02/Q-03 — decisiones documentadas
+│   └── VTR-SURVEY-001.md              # 🟡 Protocolo site survey RF — listo, sin ejecutar
 ├── crypto_layer/
 │   ├── errors.py                      # ✅ 21 excepciones, 5 categorías
 │   ├── __init__.py                    # ✅ API pública — CryptoLayer, CryptoConfig
