@@ -46,10 +46,10 @@ ambas cosas explícitamente para no confundir "fase cripto cerrada" con
 | Provisioning | Bench air-gapped funcional | ⬜ PENDIENTE | Decisión 3A aprobada (provisioning en bench, sin red). Es una decisión de diseño, no un bench físico operativo verificado. |
 | Provisioning | `device_registry.vtrdb` con append-only log + cifrado LUKS | ⬜ PENDIENTE | No existe `vtr-provision.py` ni `device_registry.vtrdb` en el repositorio. |
 | Preguntas | Q-01/Q-02/Q-03 con decisión documentada | ✅ COMPLETADO | `docs/VTR-ARCH-DECISIONS-001.md` — decisión documentada para las tres; ninguna implementada todavía como código |
-| Documentación | STRIDE en `docs/VTR-THREAT-001.md` | ⬜ PENDIENTE | No existe en el repositorio. Omisión O#7 sigue sin cerrar. |
+| Documentación | STRIDE en `docs/VTR-THREAT-001.md` | ✅ COMPLETADO | 27 amenazas catalogadas (5 Spoofing, 6 Tampering, 3 Repudiation, 4 Information Disclosure, 5 DoS, 4 Elevation of Privilege). Hallazgo crítico: `rpi/proxy.py` sin autenticación en `POST /events`/`GET /health`/`GET /stats` — gap estructural, no configuración faltante. Omisión O#7 cerrada. |
 | Documentación | Mapeo a IEC 62443 / NERC CIP | 🟡 PARCIAL | Referencias puntuales ya citadas inline en `VTR-CRYPTO-001.md` y `VTR-PKI-001.md` (SR 1.1, 1.5, 1.8, 2.1, CR 1.5). Falta el documento consolidado de mapeo cláusula-por-cláusula (E9/E10/E11). |
 
-**Resumen cuantitativo:** 11 ✅ completados / 2 🟡 parciales / 4 ⬜ pendientes,
+**Resumen cuantitativo:** 12 ✅ completados / 2 🟡 parciales / 3 ⬜ pendientes,
 de 17 bloques totales del DoD.
 
 ---
@@ -158,9 +158,19 @@ de campo — no para considerar cerrada la fase cripto, que ya lo está.
   **COMPLETADO** — ver `docs/VTR-ARCH-DECISIONS-001.md`. Implementación
   real de cada decisión sigue pendiente y se desagrega en los tres puntos
   siguientes, no incluidos en el conteo original de 14:
-  - [ ] Implementar máquina de estados de liveness (`ALIVE` /
+  - [x] ~~Implementar máquina de estados de liveness (`ALIVE` /
     `SUSPECTED_DOWN`) y campo `heartbeat_timeout_seconds` en
-    `rf_config.yaml` (Q-01).
+    `rf_config.yaml` (Q-01).~~ **COMPLETADO** —
+    `core/liveness.py` (`LivenessTracker`, 31 tests, 100% coverage). Lee
+    `updated_at` de `nonce_counter.db` ya persistida por `NonceCounter`,
+    sin tabla ni columna nueva. **Corrección aplicada durante esta
+    implementación:** `docs/VTR-ARCH-DECISIONS-001.md` afirmaba que
+    `GhostScheduler` mitigaba parcialmente el riesgo de nodo silencioso
+    sin tráfico real — verificado contra `core/dtn_fragmenter.py` real y
+    esa afirmación era incorrecta (el ghost traffic solo se dispara
+    dentro de una fragmentación de bundle real ya en curso, nunca de
+    forma autónoma). Corregido en ese documento; la limitación queda
+    documentada como conocida y no resuelta, no oculta.
   - [x] ~~Incluir campo `(node_id, counter)` en el header del formato de
     bundle `.vtrc` y tabla de verificación de "último counter visto"
     (Q-02) — requisito de entrada directa para el siguiente punto de este
@@ -171,7 +181,10 @@ de campo — no para considerar cerrada la fase cripto, que ya lo está.
   - [ ] Implementar paso de verificación de firma Ed25519 (clave
     `intermediate`) en el punto de entrada de configuración de campo,
     antes de `rf_config_loader.py` (Q-03).
-- [ ] Generar `docs/VTR-THREAT-001.md` con modelo STRIDE completo.
+- [x] ~~Generar `docs/VTR-THREAT-001.md` con modelo STRIDE completo.~~
+  **COMPLETADO** — 27 amenazas catalogadas. Hallazgo crítico: ausencia
+  estructural de autenticación en `rpi/proxy.py` (`POST /events`,
+  `GET /health`, `GET /stats`).
 - [ ] Sesión de fuzzing UART Heltec + LoRa simulado (`VTR-FUZ-001`).
 - [ ] **[PRIORIDAD MÁXIMA]** Site survey RF en ≥2 ubicaciones
   industriales/portuarias reales (RSSI/SNR/PER, link budget) — sin esto,

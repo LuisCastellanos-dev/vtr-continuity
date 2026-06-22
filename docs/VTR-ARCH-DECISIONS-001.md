@@ -61,19 +61,34 @@ existe para evitar. Inferir liveness de tráfico real ya cifrado e
 indistinguible de tráfico fantasma mantiene la propiedad de
 no-correlación temporal sin gastar presupuesto de frame.
 
-**Riesgo residual aceptado:** un nodo que genuinamente no tiene nada que
-transmitir durante la ventana completa se ve idéntico a uno caído. Mitigado
-parcialmente por el propio `GhostScheduler`, que ya inyecta tráfico
-fantasma periódico — un nodo vivo genera frames fantasma aunque no tenga
-datos reales, así que su counter avanza igual. Esto convierte al
-heartbeat pasivo en prácticamente equivalente a uno activo, sin el costo
-de un mensaje de protocolo nuevo.
+**Riesgo residual aceptado — y CORRECCIÓN sobre `GhostScheduler`:** un
+nodo que genuinamente no tiene nada que transmitir durante la ventana
+completa se ve idéntico a uno caído. La versión original de este
+documento afirmaba que esto estaba "mitigado parcialmente por el propio
+`GhostScheduler`, que ya inyecta tráfico fantasma periódico — un nodo
+vivo genera frames fantasma aunque no tenga datos reales". **Esa
+afirmación es incorrecta y se corrige aquí tras verificar el código real
+de `core/dtn_fragmenter.py`** durante la implementación de
+`core/liveness.py`: `BundleFragmenter.fragment()` solo invoca
+`GhostScheduler.should_inject()`/`make_ghost(bundle_id)` **dentro** del
+flujo de fragmentar un bundle real ya existente —
+`make_ghost(bundle_id)` requiere un `bundle_id` real como parámetro. No
+existe ninguna ruta de código donde el ghost traffic se dispare de forma
+autónoma sin que ya haya tráfico real en curso. El riesgo residual
+descrito al inicio de este párrafo **no está mitigado** en el estado
+actual del código — un nodo genuinamente silencioso (sin tráfico real
+que dispare ghost traffic) sí se ve idéntico a uno caído. Esto queda
+documentado como limitación conocida, no resuelta, en
+`core/liveness.py` (docstring del módulo).
 
-**Pendiente de implementación:** el campo `heartbeat_timeout_seconds` en
-`rf_config.yaml`, y el módulo que consulta `last_counter()` por nodo y
-mantiene la máquina de estados (`ALIVE` / `SUSPECTED_DOWN`). No existe
-código para esto todavía — esta sección documenta la decisión, no la
-implementa.
+**Implementado:** `core/liveness.py` — `LivenessTracker` con estados
+`UNKNOWN`/`ALIVE`/`SUSPECTED_DOWN`, lee `updated_at` de la tabla
+`nonce_counter` ya persistida por `NonceCounter` (ninguna columna ni
+tabla nueva). 31 tests, 100% coverage real. El campo
+`heartbeat_timeout_seconds` se implementó como parámetro del
+constructor de `LivenessTracker` (no como campo de `rf_config.yaml`
+todavía — esa integración de configuración queda como trabajo
+posterior, separado de la máquina de estados misma).
 
 ---
 
@@ -231,11 +246,11 @@ firmada" distinto al de los bundles de datos.
 
 ## Resumen — impacto en el roadmap inmediato
 
-| Pregunta | Decisión | Bloquea |
+| Pregunta | Decisión | Estado de implementación |
 |---|---|---|
-| Q-01 | Heartbeat pasivo vía progresión de `NonceCounter`, sin mensaje dedicado | Campo nuevo en `rf_config.yaml`; módulo de máquina de estados de liveness — ninguno implementado aún |
-| Q-02 | `(node_id, counter)` viaja dentro del bundle `.vtrc`; verificación contra tabla de "último counter visto", no contra RTC | Define un campo obligatorio del header de `.vtrc` — entrada directa al siguiente paso del checklist |
-| Q-03 | Configuración de campo firmada con clave de `intermediate` CA, verificada antes del loader existente | Reusa primitiva de `ed25519_sign.py`; depende del formato de bundle `.vtrc` para no duplicar mecanismo de firma |
+| Q-01 | Heartbeat pasivo vía progresión de `NonceCounter`, sin mensaje dedicado | ✅ Implementado — `core/liveness.py` (`LivenessTracker`, 31 tests, 100% coverage). Limitación conocida documentada arriba: sin `GhostScheduler` autónomo, un nodo genuinamente silencioso no se distingue de uno caído. |
+| Q-02 | `(node_id, counter)` viaja dentro del bundle `.vtrc`; verificación contra tabla de "último counter visto", no contra RTC | ✅ Implementado — `crypto_layer/vtrc_bundle.py` (header con campos fijos, `CounterVerificationStore`, 59 tests, 96% coverage). |
+| Q-03 | Configuración de campo firmada con clave de `intermediate` CA, verificada antes del loader existente | ⬜ Pendiente — reusa primitiva de `ed25519_sign.py`; el paso de verificación de firma en el punto de entrada de config de campo no existe como código todavía. |
 
 Las tres decisiones comparten un principio: **ninguna introduce una
 primitiva criptográfica o un mecanismo de confianza nuevo** — las tres
@@ -244,7 +259,8 @@ reutilizan estructuras ya validadas en las propuestas #1–#9
 consistente con el criterio aplicado durante toda la fase criptográfica:
 minimizar superficie nueva, maximizar reuso de lo ya probado.
 
-Q-02 es la dependencia más directa para el siguiente paso del checklist
-(formato de bundle `.vtrc`) — el header de ese formato debe incluir el
-campo `(node_id, counter)` desde el diseño inicial, no como adición
-posterior.
+Q-01 y Q-02 ya están implementadas y verificadas con tests reales. Q-03
+queda como el único punto pendiente de este trío — depende del formato
+de bundle `.vtrc` (ya implementado en Q-02) para reusar la misma
+primitiva de firma/verificación en vez de inventar un formato de "config
+firmada" distinto.
