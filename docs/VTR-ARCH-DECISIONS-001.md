@@ -250,7 +250,7 @@ firmada" distinto al de los bundles de datos.
 |---|---|---|
 | Q-01 | Heartbeat pasivo vía progresión de `NonceCounter`, sin mensaje dedicado | ✅ Implementado — `core/liveness.py` (`LivenessTracker`, 31 tests, 100% coverage). Limitación conocida documentada arriba: sin `GhostScheduler` autónomo, un nodo genuinamente silencioso no se distingue de uno caído. |
 | Q-02 | `(node_id, counter)` viaja dentro del bundle `.vtrc`; verificación contra tabla de "último counter visto", no contra RTC | ✅ Implementado — `crypto_layer/vtrc_bundle.py` (header con campos fijos, `CounterVerificationStore`, 59 tests, 96% coverage). |
-| Q-03 | Configuración de campo firmada con clave de `intermediate` CA, verificada antes del loader existente | ⬜ Pendiente — reusa primitiva de `ed25519_sign.py`; el paso de verificación de firma en el punto de entrada de config de campo no existe como código todavía. |
+| Q-03 | Configuración de campo firmada con clave de `intermediate` CA, verificada antes del loader existente | ✅ Implementado — `crypto_layer/field_config_verifier.py` (`sign_field_config`/`verify_field_config`/`verify_and_write_field_config`, 24 tests, 100% coverage). Formato propio (`signature‖yaml_bytes`), distinto del bundle `.vtrc` — no fuerza semántica de `counter` que no aplica a config. Confirmado: con firma inválida, nunca escribe a disco ni sobrescribe config existente. |
 
 Las tres decisiones comparten un principio: **ninguna introduce una
 primitiva criptográfica o un mecanismo de confianza nuevo** — las tres
@@ -259,8 +259,12 @@ reutilizan estructuras ya validadas en las propuestas #1–#9
 consistente con el criterio aplicado durante toda la fase criptográfica:
 minimizar superficie nueva, maximizar reuso de lo ya probado.
 
-Q-01 y Q-02 ya están implementadas y verificadas con tests reales. Q-03
-queda como el único punto pendiente de este trío — depende del formato
-de bundle `.vtrc` (ya implementado en Q-02) para reusar la misma
-primitiva de firma/verificación en vez de inventar un formato de "config
-firmada" distinto.
+Las tres decisiones (Q-01, Q-02, Q-03) están implementadas y verificadas
+con tests reales — el trío queda cerrado. Nota de diseño sobre Q-03: la
+implementación final reusa directamente las primitivas
+`sign()`/`verify()` de `ed25519_sign.py`, no el formato completo de
+bundle `.vtrc` de Q-02 — un archivo de configuración no tiene la misma
+semántica de replay que datos operativos (ver docstring de
+`crypto_layer/field_config_verifier.py` para el razonamiento completo),
+así que forzar el campo `counter` del bundle ahí habría sido superficie
+nueva sin justificación de seguridad correspondiente.

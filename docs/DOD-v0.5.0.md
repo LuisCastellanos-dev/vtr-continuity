@@ -178,9 +178,16 @@ de campo — no para considerar cerrada la fase cripto, que ya lo está.
     con `node_id`/`counter` fijos) + `CounterVerificationStore` (tabla de
     verificación, estructuralmente paralela a `NonceCounter` pero en modo
     lectura).
-  - [ ] Implementar paso de verificación de firma Ed25519 (clave
+  - [x] ~~Implementar paso de verificación de firma Ed25519 (clave
     `intermediate`) en el punto de entrada de configuración de campo,
-    antes de `rf_config_loader.py` (Q-03).
+    antes de `rf_config_loader.py` (Q-03).~~ **COMPLETADO** —
+    `crypto_layer/field_config_verifier.py` (`sign_field_config`/
+    `verify_field_config`/`verify_and_write_field_config`, 24 tests,
+    100% coverage). Formato propio, distinto del bundle `.vtrc` —
+    sin campo `counter` forzado (no aplica semánticamente a config).
+    Confirmado contra `rf_config.yaml` real e integración real con
+    `load_crypto_config()` sin modificarlo. **Trío Q-01/Q-02/Q-03
+    cerrado por completo.**
 - [x] ~~Generar `docs/VTR-THREAT-001.md` con modelo STRIDE completo.~~
   **COMPLETADO** — 27 amenazas catalogadas. Hallazgo crítico: ausencia
   estructural de autenticación en `rpi/proxy.py` (`POST /events`,
