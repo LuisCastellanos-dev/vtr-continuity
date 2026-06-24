@@ -201,8 +201,25 @@ de campo — no para considerar cerrada la fase cripto, que ya lo está.
   en `docs/VTR-SURVEY-001.md`** — hardware (2× Heltec) ya disponible,
   ejecución planeada para la siguiente sesión activa tras el break del
   20-jun-2026.
-- [ ] Tests E2E browser ↔ backend para verificación de `.vtrc` en
-  `session_guard.js` (omisión O#8).
+- [x] ~~Tests E2E browser ↔ backend para verificación de `.vtrc` en
+  `session_guard.js` (omisión O#8).~~ **COMPLETADO con corrección de
+  alcance** — `tests/e2e/session_guard.e2e.test.js` + `test_server.js`,
+  18 tests E2E contra servidor HTTP real (no mock de función), 59/59
+  passed incluyendo los 41 unitarios existentes, validado en Node
+  18.19.1 real (no solo en el entorno de desarrollo Node 22). **Hallazgo
+  de alcance:** `session_guard.js` (v0.1.0) no implementa ni referencia
+  `.vtrc` en absoluto — es anterior a la fase criptográfica; la omisión
+  tal como estaba redactada asumía una integración que no existe en el
+  código. Documentado explícitamente, no asumido. **Tres hallazgos
+  reales adicionales encontrados probando contra código real:** (1)
+  `globalThis.crypto` no es nativo en Node < 19 — requirió polyfill en
+  el arnés de pruebas, no en el código de producción; (2) el snapshot
+  cifrado nunca sobrevive entre instancias distintas de `CryptoLayer`
+  porque cada una genera una clave AES-GCM no exportable — mitigación de
+  XSS funcionando como se diseñó, no un bug, pero significa que no hay
+  persistencia real entre recargas de página; (3) el orden FIFO de
+  `OfflineQueue` no es determinístico ante colisión de `Date.now()` en
+  el mismo milisegundo, reproducido y documentado con test dedicado.
 - [ ] Mapeo consolidado decisión-por-decisión a cláusulas IEC 62443 /
   NERC CIP (omisiones O#10, tareas E9/E10/E11) — hoy solo existen
   referencias puntuales dispersas en `VTR-CRYPTO-001.md` y
