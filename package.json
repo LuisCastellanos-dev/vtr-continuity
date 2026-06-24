@@ -1,18 +1,19 @@
 {
   "name": "vtr-continuity",
   "version": "1.0.0",
-  "description": "Vector Telemetry Research \u00a9 2026",
+  "description": "Vector Telemetry Research © 2026",
   "main": "index.js",
   "directories": {
     "test": "tests"
   },
   "scripts": {
-    "test": "jest"
+    "test": "jest --forceExit"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "fake-indexeddb": "^6.2.5",
     "jest": "^30.4.2"
   },
   "jest": {
