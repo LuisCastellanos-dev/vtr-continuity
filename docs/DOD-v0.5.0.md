@@ -47,9 +47,9 @@ ambas cosas explícitamente para no confundir "fase cripto cerrada" con
 | Provisioning | `device_registry.vtrdb` con append-only log + cifrado LUKS | ⬜ PENDIENTE | No existe `vtr-provision.py` ni `device_registry.vtrdb` en el repositorio. |
 | Preguntas | Q-01/Q-02/Q-03 con decisión documentada | ✅ COMPLETADO | `docs/VTR-ARCH-DECISIONS-001.md` — decisión documentada para las tres; ninguna implementada todavía como código |
 | Documentación | STRIDE en `docs/VTR-THREAT-001.md` | ✅ COMPLETADO | 27 amenazas catalogadas (5 Spoofing, 6 Tampering, 3 Repudiation, 4 Information Disclosure, 5 DoS, 4 Elevation of Privilege). Hallazgo crítico: `rpi/proxy.py` sin autenticación en `POST /events`/`GET /health`/`GET /stats` — gap estructural, no configuración faltante. Omisión O#7 cerrada. |
-| Documentación | Mapeo a IEC 62443 / NERC CIP | 🟡 PARCIAL | Referencias puntuales ya citadas inline en `VTR-CRYPTO-001.md` y `VTR-PKI-001.md` (SR 1.1, 1.5, 1.8, 2.1, CR 1.5). Falta el documento consolidado de mapeo cláusula-por-cláusula (E9/E10/E11). |
+| Documentación | Mapeo a IEC 62443 / NERC CIP | ✅ COMPLETADO | `docs/VTR-COMPLIANCE-001.md` — 16 filas mapeadas (10 verificables por código en `server/compliance.py`, 2 diseño completo, 3 parciales, 1 no implementado). Dos brechas reales encontradas al consolidar: CIP-008-6 citado en docstring sin chequeo real; SR 2.1 conecta directamente con el hallazgo de `rpi/proxy.py` sin auth de STRIDE. Omisión O#10 cerrada. |
 
-**Resumen cuantitativo:** 12 ✅ completados / 2 🟡 parciales / 3 ⬜ pendientes,
+**Resumen cuantitativo:** 13 ✅ completados / 1 🟡 parcial / 3 ⬜ pendientes,
 de 17 bloques totales del DoD.
 
 ---
@@ -220,12 +220,21 @@ de campo — no para considerar cerrada la fase cripto, que ya lo está.
   persistencia real entre recargas de página; (3) el orden FIFO de
   `OfflineQueue` no es determinístico ante colisión de `Date.now()` en
   el mismo milisegundo, reproducido y documentado con test dedicado.
-- [ ] Mapeo consolidado decisión-por-decisión a cláusulas IEC 62443 /
+- [x] ~~Mapeo consolidado decisión-por-decisión a cláusulas IEC 62443 /
   NERC CIP (omisiones O#10, tareas E9/E10/E11) — hoy solo existen
   referencias puntuales dispersas en `VTR-CRYPTO-001.md` y
-  `VTR-PKI-001.md`.
-- [ ] Especificación de firmware Heltec: eFuse + Ed25519 vía
-  micro-ecc/libsodium (omisión O#6, tarea E6).
+  `VTR-PKI-001.md`.~~ **COMPLETADO** — `docs/VTR-COMPLIANCE-001.md`,
+  16 filas mapeadas, citando archivo y línea real para cada una.
+- [x] ~~Especificación de firmware Heltec: eFuse + Ed25519 vía
+  micro-ecc/libsodium (omisión O#6, tarea E6).~~ **COMPLETADO con
+  corrección de alcance** — `docs/VTR-FIRMWARE-001.md`. **Hallazgo:**
+  `micro-ecc` no soporta Ed25519 (solo ECDSA/ECDH) — no era una opción
+  real, no solo "la elegida". Decisión final: `libsodium` vía ESP-IDF
+  puro (no Arduino, que ya no lo incluye por defecto desde IDF5).
+  Riesgo de heap-corruption con PSRAM (issue esp-idf #8742) verificado
+  y descartado para el Heltec V3 (sin PSRAM, confirmado contra
+  especificación oficial del fabricante) — a reevaluar si se migra a
+  V4.
 
 **Ninguno de estos catorce puntos estaba dentro del alcance de las 10
 propuestas de la fase criptográfica.** Cerrar la fase cripto al 100% no
