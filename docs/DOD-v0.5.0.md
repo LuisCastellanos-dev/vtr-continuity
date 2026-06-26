@@ -46,7 +46,7 @@ ambas cosas explícitamente para no confundir "fase cripto cerrada" con
 | Provisioning | Bench air-gapped funcional | ⬜ PENDIENTE | Decisión 3A aprobada (provisioning en bench, sin red). Es una decisión de diseño, no un bench físico operativo verificado. |
 | Provisioning | `device_registry.vtrdb` con append-only log + cifrado LUKS | ⬜ PENDIENTE | No existe `vtr-provision.py` ni `device_registry.vtrdb` en el repositorio. |
 | Preguntas | Q-01/Q-02/Q-03 con decisión documentada | ✅ COMPLETADO | `docs/VTR-ARCH-DECISIONS-001.md` — decisión documentada para las tres; ninguna implementada todavía como código |
-| Documentación | STRIDE en `docs/VTR-THREAT-001.md` | ✅ COMPLETADO | 27 amenazas catalogadas (5 Spoofing, 6 Tampering, 3 Repudiation, 4 Information Disclosure, 5 DoS, 4 Elevation of Privilege). Hallazgo crítico: `rpi/proxy.py` sin autenticación en `POST /events`/`GET /health`/`GET /stats` — gap estructural, no configuración faltante. Omisión O#7 cerrada. |
+| Documentación | STRIDE en `docs/VTR-THREAT-001.md` | ✅ COMPLETADO | 27 amenazas catalogadas (5 Spoofing, 6 Tampering, 3 Repudiation, 4 Information Disclosure, 5 DoS, 4 Elevation of Privilege). **Hallazgo crítico CERRADO:** `rpi/proxy.py` sin autenticación en `POST /events`/`GET /health`/`GET /stats` — corregido con `rpi/proxy_auth.py` (commit `892c079`), conecta `RPiJWTVerifier` ya existente, 22 tests, 100% coverage, sin bypass de debug. Solo D-3 (rate limiting) sigue 🟡 parcial — ver `docs/VTR-THREAT-001.md` §8. Omisión O#7 cerrada. |
 | Documentación | Mapeo a IEC 62443 / NERC CIP | ✅ COMPLETADO | `docs/VTR-COMPLIANCE-001.md` — 16 filas mapeadas (10 verificables por código en `server/compliance.py`, 2 diseño completo, 3 parciales, 1 no implementado). Dos brechas reales encontradas al consolidar: CIP-008-6 citado en docstring sin chequeo real; SR 2.1 conecta directamente con el hallazgo de `rpi/proxy.py` sin auth de STRIDE. Omisión O#10 cerrada. |
 
 **Resumen cuantitativo:** 13 ✅ completados / 1 🟡 parcial / 3 ⬜ pendientes,
@@ -220,6 +220,23 @@ de campo — no para considerar cerrada la fase cripto, que ya lo está.
   persistencia real entre recargas de página; (3) el orden FIFO de
   `OfflineQueue` no es determinístico ante colisión de `Date.now()` en
   el mismo milisegundo, reproducido y documentado con test dedicado.
+- [x] ~~Cerrar el hallazgo crítico de `docs/VTR-THREAT-001.md`
+  (S-3/T-3/R-3/D-3/I-3): `rpi/proxy.py` sin autenticación estructural en
+  `POST /events`, `GET /health`, `GET /stats`, `DELETE /queue`.~~
+  **COMPLETADO** — `rpi/proxy_auth.py` (commit `892c079`), conecta
+  `rpi/jwt_verifier.py::RPiJWTVerifier` (existente desde v0.4.0, nunca
+  invocado por ningún endpoint) con los 4 endpoints vía
+  `Depends(require_scope(...))`. **Decisión confirmada explícitamente:
+  sin bypass de modo debug** — `VTR_DEBUG=true` solo controla la
+  disponibilidad de `DELETE /queue` (sin cambios), nunca exime de la
+  autenticación JWT. Grace period offline reusa el estado real de
+  `SyncManager.state.status == "OFFLINE"`, no una bandera separada. 22
+  tests, 100% coverage real, validado en usuario sin privilegios de
+  root (encontró y corrigió un bug real de aislamiento: `custody_db_path`
+  de `SyncConfig` no era configurable por variable de entorno —
+  agregada `VTR_CUSTODY_DB_PATH`, mejora real de producción, no solo de
+  test). D-3 (rate limiting) queda explícitamente fuera de este fix —
+  sigue 🟡 parcial en `VTR-THREAT-001.md`.
 - [x] ~~Mapeo consolidado decisión-por-decisión a cláusulas IEC 62443 /
   NERC CIP (omisiones O#10, tareas E9/E10/E11) — hoy solo existen
   referencias puntuales dispersas en `VTR-CRYPTO-001.md` y
