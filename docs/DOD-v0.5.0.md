@@ -44,12 +44,12 @@ ambas cosas explícitamente para no confundir "fase cripto cerrada" con
 | Bundle | Verificación de firma `.vtrc` en lectura (sneakernet inbound) | ✅ COMPLETADO | `verify_bundle()` en el mismo módulo — retorna `False` (no excepción) ante firma inválida o bundle corrupto, mismo contrato que `ed25519_sign.verify()`. `CounterVerificationStore` añade la verificación de replay sin sesión (tabla de "último counter visto", nunca el RTC). |
 | Storage | `storage_guardian.py` (purga FIFO, umbrales 80%/95%) | ✅ COMPLETADO | `core/storage_guardian.py` — monitoreo por base SQLite individual (no disco total), purga FIFO solo en bases `TRANSIENT` (ej. `fragments.db`), bases `COUNTER` (`nonce_counter.db`, `vtrc_counter_seen.db`) protegidas explícitamente contra purga automática. 41 tests, 98% coverage real, incluye protección contra inyección SQL en nombres de tabla/columna interpolados. |
 | Provisioning | Bench air-gapped funcional | ⬜ PENDIENTE | Decisión 3A aprobada (provisioning en bench, sin red). Es una decisión de diseño, no un bench físico operativo verificado. |
-| Provisioning | `device_registry.vtrdb` con append-only log + cifrado LUKS | ⬜ PENDIENTE | No existe `vtr-provision.py` ni `device_registry.vtrdb` en el repositorio. |
+| Provisioning | `device_registry.vtrdb` con append-only log + cifrado LUKS | ✅ COMPLETADO | `core/device_registry.py` + `scripts/vtr-provision.py` (commit `7869ddf`). Hash chain real (no solo SHA-256 por entrada como `AuditLog`) — verificado contra manipulación directa de SQLite, dos escenarios distintos (borrado de fila, modificación de contenido sin romper enlace). Firma por la Intermediate confirmada explícitamente. Cifrado a nivel de aplicación con XChaCha20-Poly1305 real (`nacl.secret.Aead`) — decisión confirmada de no presumir LUKS del volumen. 30 tests, 98% coverage real. **Hallazgo:** el comentario de `core/crypto_transport.py` dice "XChaCha20-Poly1305" pero el código usa `nacl.secret.SecretBox` (XSalsa20-Poly1305 real, según documentación oficial de PyNaCl) — discrepancia de nomenclatura, no corregida en este trabajo (fuera de alcance), anotada para revisión futura. |
 | Preguntas | Q-01/Q-02/Q-03 con decisión documentada | ✅ COMPLETADO | `docs/VTR-ARCH-DECISIONS-001.md` — decisión documentada para las tres; ninguna implementada todavía como código |
 | Documentación | STRIDE en `docs/VTR-THREAT-001.md` | ✅ COMPLETADO | 27 amenazas catalogadas (5 Spoofing, 6 Tampering, 3 Repudiation, 4 Information Disclosure, 5 DoS, 4 Elevation of Privilege). **Hallazgo crítico CERRADO:** `rpi/proxy.py` sin autenticación en `POST /events`/`GET /health`/`GET /stats` — corregido con `rpi/proxy_auth.py` (commit `892c079`), conecta `RPiJWTVerifier` ya existente, 22 tests, 100% coverage, sin bypass de debug. Solo D-3 (rate limiting) sigue 🟡 parcial — ver `docs/VTR-THREAT-001.md` §8. Omisión O#7 cerrada. |
 | Documentación | Mapeo a IEC 62443 / NERC CIP | ✅ COMPLETADO | `docs/VTR-COMPLIANCE-001.md` — 16 filas mapeadas (10 verificables por código en `server/compliance.py`, 2 diseño completo, 3 parciales, 1 no implementado). Dos brechas reales encontradas al consolidar: CIP-008-6 citado en docstring sin chequeo real; SR 2.1 conecta directamente con el hallazgo de `rpi/proxy.py` sin auth de STRIDE. Omisión O#10 cerrada. |
 
-**Resumen cuantitativo:** 13 ✅ completados / 1 🟡 parcial / 3 ⬜ pendientes,
+**Resumen cuantitativo:** 14 ✅ completados / 1 🟡 parcial / 2 ⬜ pendientes,
 de 17 bloques totales del DoD.
 
 ---
@@ -150,8 +150,19 @@ de campo — no para considerar cerrada la fase cripto, que ya lo está.
   procedimiento documentado en `VTR-PKI-001.md`).
 - [ ] Resolver la distribución de los custodios 2–5 del esquema SSS 3-de-5
   (pendiente operativo, no técnico — depende de logística propia).
-- [ ] Implementar `vtr-provision.py` + `device_registry.vtrdb` con
-  append-only log y cifrado LUKS.
+- [x] ~~Implementar `vtr-provision.py` + `device_registry.vtrdb` con
+  append-only log y cifrado LUKS.~~ **COMPLETADO con corrección de
+  alcance** — `core/device_registry.py` + `scripts/vtr-provision.py`
+  (commit `7869ddf`). Decisión confirmada explícitamente: cifrado a
+  nivel de aplicación (`nacl.secret.Aead`, XChaCha20-Poly1305 real) en
+  vez de presumir que LUKS del volumen ya resuelve la confidencialidad
+  — el código no puede verificar una garantía de otra capa que no
+  controla. Firma de cada entrada con la Intermediate (misma llave que
+  certificados de dispositivo, confirmado). Hash chain real, verificado
+  contra manipulación directa de SQLite en dos escenarios (borrado de
+  fila, modificación de contenido sin romper enlace) — garantía más
+  fuerte que `AuditLog` existente. CLI probado como comandos de shell
+  reales, exit codes correctos. 30 tests, 98% coverage real.
 - [ ] Setup del bench air-gapped físico (decisión 3A ya aprobada, sin
   ejecución verificada).
 - [x] ~~Documentar decisión arquitectónica para Q-01, Q-02 y Q-03.~~
