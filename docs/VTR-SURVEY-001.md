@@ -26,11 +26,36 @@ rf:
     duty_cycle_percent: 1.0
 ```
 
-Con esos parámetros, el link budget teórico del SX1262 (sensibilidad de
-referencia de datasheet ≈ −129 dBm para SF9/BW125, antenas Heltec
-estándar ~2 dBi) da un alcance en espacio libre de **~580 km** (modelo
-Friis, línea de vista ideal, sin obstáculos). Ese número no significa
-nada para el despliegue real — es el techo teórico, no una promesa. En
+Con esos parámetros, el link budget teórico del SX1262 da un alcance en
+espacio libre de **~584 km** (modelo Friis, línea de vista ideal, sin
+obstáculos).
+
+**Corrección de citación (revisión post-redacción inicial):** la versión
+original de esta sección usaba `−129 dBm` como "sensibilidad de
+referencia de datasheet" sin citar una fuente verificable — un error de
+proceso, no necesariamente un error de resultado. Verificación posterior
+confirmó que `−129 dBm` es correcto para **SF9/BW125kHz**
+específicamente (el SF/BW reales de `rf_config.yaml`, no SF12 — la
+sensibilidad cambia con el spreading factor, así que citar sin precisar
+el SF es ambiguo incluso cuando el número final coincide). El cálculo
+verificable es:
+
+```
+noise_floor(BW=125kHz, NF=6dB receptor real) = -174 dBm/Hz + 6 dB + 10·log10(125000)
+                                              ≈ -117 dBm
+sensibilidad(SF9) = noise_floor + SNR_requerido(SF9, ≈ -12.5 dB)
+                   ≈ -129.5 dBm
+```
+
+donde el SNR requerido por spreading factor sigue la progresión
+estándar de LoRa (cada incremento de SF mejora la sensibilidad ~2.5 dB:
+SF7≈−123dBm, SF8≈−126dBm, SF9≈−129dBm, SF10≈−132dBm, SF11≈−134.5dBm,
+SF12≈−137dBm, consistente con la sensibilidad de −137dBm a SF12 que el
+propio Semtech garantiza para el SX1262). Antenas Heltec estándar
+asumidas en ~2 dBi cada extremo.
+
+Ese número (584 km) no significa nada para el despliegue real — es el
+techo teórico, no una promesa. En
 un entorno industrial/portuario real (estructuras metálicas, tanques de
 almacenamiento, grúas, naves de proceso), el alcance real puede ser una
 fracción pequeña de eso, y la única forma de saber cuánto es medir.
@@ -63,7 +88,7 @@ punto a punto:
    fijas.
 
 El resultado de estas tres métricas, en cada ubicación y a cada
-distancia probada, es lo que reemplaza la cifra teórica de 580 km por el
+distancia probada, es lo que reemplaza la cifra teórica de 584 km por el
 alcance real operativo — y decide si los parámetros actuales de
 `rf_config.yaml` sirven tal cual, o si necesitan ajuste antes de
 considerarse parte de un release.

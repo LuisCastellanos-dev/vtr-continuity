@@ -196,7 +196,7 @@ de campo — no para considerar cerrada la fase cripto, que ya lo está.
 - [ ] **[PRIORIDAD MÁXIMA]** Site survey RF en ≥2 ubicaciones
   industriales/portuarias reales (RSSI/SNR/PER, link budget) — sin esto,
   el alcance real de LoRa en el corredor Tampico-Altamira-Madero sigue
-  siendo teórico (580 km en espacio libre vs. realidad industrial
+  siendo teórico (584 km en espacio libre vs. realidad industrial
   desconocida). **Protocolo de medición completo y listo para ejecución
   en `docs/VTR-SURVEY-001.md`** — hardware (2× Heltec) ya disponible,
   ejecución planeada para la siguiente sesión activa tras el break del
