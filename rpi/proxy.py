@@ -1,5 +1,5 @@
 """
-vtr-continuity v0.2.0 — RPi 4 OT Tier
+vtr-continuity v0.5.0 — RPi 4 OT Tier
 rpi/proxy.py
 
 Proxy HTTP local en el RPi 4.
@@ -10,10 +10,26 @@ Recibe eventos desde:
 El proxy persiste en SQLite y el SyncManager reenvía al servidor central.
 
 Endpoints:
-  POST /events          — recibir evento(s) OT
-  GET  /health          — estado del proxy y SyncManager
-  GET  /stats           — métricas de cola y sincronización
-  DELETE /queue         — limpiar cola (solo modo debug)
+  POST /events          — recibir evento(s) OT — requiere JWT scope "write"
+  GET  /health          — estado del proxy y SyncManager — requiere JWT scope "read"
+  GET  /stats            — métricas de cola y sincronización — requiere JWT scope "read"
+  DELETE /queue         — limpiar cola (solo modo debug) — requiere JWT scope "write"
+
+Autenticación (v0.5.0, ver rpi/proxy_auth.py): todos los endpoints exigen
+header `Authorization: Bearer <jwt>` verificado contra
+rpi/jwt_verifier.py::RPiJWTVerifier — sin excepción de modo debug. Origen:
+docs/VTR-THREAT-001.md S-3/T-3/R-3/D-3/I-3 (ausencia estructural de
+autenticación). VTR_DEBUG=true sigue controlando únicamente la
+disponibilidad de DELETE /queue, no la autenticación de ningún endpoint.
+
+Variables de entorno relevantes (todas con default seguro para
+desarrollo local, deben configurarse explícitamente en producción):
+  VTR_JWT_PUBLIC_KEY_PATH  — clave pública RS256 (default: /etc/vtr-continuity/public_key.pem)
+  VTR_DB_PATH              — ruta de queue.db (default: /var/lib/vtr-continuity/queue.db)
+  VTR_CUSTODY_DB_PATH      — ruta de custody.db (default: /var/lib/vtr-continuity/custody.db).
+                              Agregada en v0.5.0 — antes era una ruta fija
+                              en SyncConfig sin forma de configurarla sin
+                              editar código fuente.
 
 Uso:
   uvicorn rpi.proxy:app --host 0.0.0.0 --port 7700
@@ -31,10 +47,12 @@ import uuid
 from contextlib import asynccontextmanager
 from typing import Any
 
-from fastapi import FastAPI, HTTPException, Request, status
+from fastapi import Depends, FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, field_validator
 
+from . import proxy_auth
+from .jwt_verifier import RPiVerifyResult
 from .queue_store import QueueStore, QueuedEvent
 from .sync_manager import SyncManager, SyncConfig
 from .transport import IPTransport, TransportConfig
@@ -48,8 +66,14 @@ logger = logging.getLogger(__name__)
 SERVER_URL = os.environ.get("VTR_SERVER_URL", "http://localhost:8000")
 API_KEY = os.environ.get("VTR_API_KEY", "")
 DB_PATH = os.environ.get("VTR_DB_PATH", "/var/lib/vtr-continuity/queue.db")
+CUSTODY_DB_PATH = os.environ.get(
+    "VTR_CUSTODY_DB_PATH", "/var/lib/vtr-continuity/custody.db"
+)
 DEBUG_MODE = os.environ.get("VTR_DEBUG", "false").lower() == "true"
 ALLOWED_ORIGINS = os.environ.get("VTR_ALLOWED_ORIGINS", "http://localhost:3000").split(",")
+JWT_PUBLIC_KEY_PATH = os.environ.get(
+    "VTR_JWT_PUBLIC_KEY_PATH", "/etc/vtr-continuity/public_key.pem"
+)
 
 # ---------------------------------------------------------------------------
 # Inicialización de servicios (lifespan)
@@ -69,6 +93,12 @@ async def lifespan(app: FastAPI):
             "podrá sincronizar con el servidor central"
         )
 
+    # Falla rápido y explícitamente si la clave pública JWT no existe —
+    # mismo principio que RPiJWTVerifier ya documenta ("nunca opera sin
+    # clave pública válida"): el proxy no debe arrancar silenciosamente
+    # en un estado donde ningún endpoint puede autenticar nada.
+    proxy_auth.init_verifier(public_key_path=JWT_PUBLIC_KEY_PATH)
+
     _store = QueueStore(db_path=DB_PATH)
 
     transport = IPTransport(
@@ -83,6 +113,7 @@ async def lifespan(app: FastAPI):
         config=SyncConfig(
             heartbeat_interval_s=30.0,
             flush_batch_size=50,
+            custody_db_path=CUSTODY_DB_PATH,
         ),
     )
     _sync.start()
@@ -195,7 +226,10 @@ def _event_to_queued(evt: EventPayload) -> QueuedEvent:
 # ---------------------------------------------------------------------------
 
 @app.post("/events", response_model=EventResponse, status_code=status.HTTP_202_ACCEPTED)
-async def receive_events(batch: BatchEventPayload) -> EventResponse:
+async def receive_events(
+    batch: BatchEventPayload,
+    _auth: RPiVerifyResult = Depends(proxy_auth.require_scope("write")),
+) -> EventResponse:
     """
     Recibe uno o más eventos OT y los encola en SQLite.
 
@@ -232,7 +266,9 @@ async def receive_events(batch: BatchEventPayload) -> EventResponse:
 
 
 @app.get("/health")
-async def health() -> dict[str, Any]:
+async def health(
+    _auth: RPiVerifyResult = Depends(proxy_auth.require_scope("read")),
+) -> dict[str, Any]:
     """
     Estado del proxy. Usado por:
     - Servidor central para verificar conectividad con el RPi
@@ -255,7 +291,9 @@ async def health() -> dict[str, Any]:
 
 
 @app.get("/stats")
-async def stats() -> dict[str, Any]:
+async def stats(
+    _auth: RPiVerifyResult = Depends(proxy_auth.require_scope("read")),
+) -> dict[str, Any]:
     """Métricas detalladas de cola y sincronización."""
     store = _get_store()
     sync = _get_sync()
@@ -274,10 +312,15 @@ async def stats() -> dict[str, Any]:
 
 
 @app.delete("/queue", status_code=status.HTTP_200_OK)
-async def clear_queue(request: Request) -> dict[str, Any]:
+async def clear_queue(
+    request: Request,
+    _auth: RPiVerifyResult = Depends(proxy_auth.require_scope("write")),
+) -> dict[str, Any]:
     """
     Vacía la cola completa.
     Solo disponible en modo DEBUG — nunca exponer en producción OT.
+    Requiere JWT scope "write" — sin excepción de modo debug, ver
+    rpi/proxy_auth.py.
     """
     if not DEBUG_MODE:
         raise HTTPException(
